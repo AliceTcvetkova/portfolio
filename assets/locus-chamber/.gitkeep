@@ -1,0 +1,17 @@
+# Locus Chamber slides
+
+Drop slide images here (PNG or JPG).
+
+Reference them in `js/locus-chamber.js`:
+
+```js
+"slide-01": {
+  type: "slide",
+  title: "…",
+  caption: "…",
+  image: "assets/locus-chamber/slide-01.png",
+  next: "slide-02"
+}
+```
+
+Interaction types: `next`, `choices`, `autoNext`, `hotspots` — see comments in `locus-chamber.js`.

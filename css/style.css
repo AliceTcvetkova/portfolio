@@ -38,6 +38,7 @@ body {
   background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(113, 112, 255, 0.12), transparent);
   -webkit-font-smoothing: antialiased;
   isolation: isolate;
+  cursor: default;
 }
 
 /* Sketch background layer */
@@ -53,6 +54,8 @@ body {
   position: absolute;
   max-width: none;
   height: auto;
+  object-fit: contain;
+  object-position: left bottom;
   filter:
     drop-shadow(0 0 18px rgba(113, 112, 255, 0.45))
     drop-shadow(0 0 40px rgba(113, 112, 255, 0.25))
@@ -61,10 +64,23 @@ body {
   -webkit-user-drag: none;
 }
 
+.locus-page .sketch-bg__piece {
+  max-height: min(72vh, 640px);
+}
+
+.locus-svg-filters {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .site-header,
 .hero,
 .stats,
 .section,
+.locus-main,
 .sketchbook-teaser,
 .site-footer,
 .case-detail,
@@ -84,6 +100,12 @@ img {
 a {
   color: inherit;
   text-decoration: none;
+  cursor: pointer;
+}
+
+button,
+[role="button"] {
+  cursor: pointer;
 }
 
 /* Header */
@@ -124,6 +146,25 @@ a {
   color: var(--text);
 }
 
+.site-header__nav--resume {
+  color: var(--accent);
+}
+
+.site-header__nav--resume:hover {
+  color: #9897ff;
+}
+
+.site-header__nav a:focus-visible,
+.btn:focus-visible,
+.card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.card:focus-visible {
+  outline-offset: 4px;
+}
+
 /* Hero */
 .hero {
   max-width: var(--max);
@@ -153,8 +194,15 @@ a {
 .hero__role {
   font-size: 1.125rem;
   color: var(--text-muted);
-  margin: 0 0 1.25rem;
+  margin: 0 0 0.5rem;
   font-weight: 400;
+}
+
+.hero__proof {
+  font-size: 0.9375rem;
+  color: var(--text-subtle);
+  margin: 0 0 1rem;
+  letter-spacing: 0.02em;
 }
 
 .hero__tagline {
@@ -170,7 +218,39 @@ a {
   flex-wrap: wrap;
   gap: 0.75rem;
   justify-content: center;
-  margin-bottom: 4rem;
+  margin-bottom: 2rem;
+}
+
+.about {
+  max-width: var(--max);
+  margin: 0 auto 3rem;
+  padding: 0 1.5rem;
+  text-align: center;
+}
+
+.about__title {
+  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 1rem;
+}
+
+.about__text {
+  max-width: 52ch;
+  margin: 0 auto;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+.btn--resume {
+  border-color: rgba(113, 112, 255, 0.35);
+  background: var(--accent-muted);
+}
+
+.btn--resume:hover {
+  border-color: rgba(113, 112, 255, 0.55);
+  background: rgba(113, 112, 255, 0.22);
 }
 
 .btn {
@@ -327,6 +407,13 @@ a {
   color: var(--text-muted);
   margin: 0 0 1.25rem;
   line-height: 1.55;
+}
+
+.card__outcome {
+  display: block;
+  color: var(--text);
+  font-weight: 500;
+  margin-bottom: 0.35rem;
 }
 
 .card__metrics {
@@ -787,12 +874,31 @@ body.case-lightbox-open {
 
 /* Responsive */
 @media (max-width: 640px) {
+  .site-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .site-header__nav {
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    justify-content: flex-end;
+  }
+
+  .site-header__nav a {
+    font-size: 0.8125rem;
+  }
+
   .hero {
     padding-top: 2.5rem;
   }
 
   .stats {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .stat__label {
+    font-size: 0.75rem;
   }
 
   .cards {

@@ -1,0 +1,8 @@
+{
+  "name": "Locus Chamber — Room Screens",
+  "id": "locus-chamber-room-screens",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page"
+}

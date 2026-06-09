@@ -8,8 +8,8 @@
       { file: "line-village.png", bottom: "4%", right: "-12%", width: "min(500px, 56vw)", rotate: "2deg", opacity: 0.18 }
     ],
     "locus-chamber": [
-      { file: "line-sprout.png", top: "12%", right: "-6%", width: "min(380px, 44vw)", rotate: "5deg", opacity: 0.22 },
-      { file: "line-spear.png", bottom: "-2%", left: "-16%", width: "min(520px, 58vw)", rotate: "-3deg", opacity: 0.17 }
+      { file: "line-sprout.png", top: "12%", right: "-4%", width: "min(300px, 34vw)", rotate: "5deg", opacity: 0.2 },
+      { file: "line-spear.png", bottom: "0", left: "0", width: "min(280px, 24vw)", rotate: "-2deg", opacity: 0.15 }
     ],
     "clean-map": [
       { file: "line-gazelles.png", top: "18%", left: "-12%", width: "min(580px, 64vw)", rotate: "0deg", opacity: 0.19 },

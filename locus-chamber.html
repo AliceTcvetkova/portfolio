@@ -4,67 +4,126 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Locus Chamber · Alice Tsvetkova</title>
+  <script src="js/site-config.js"></script>
+  <script src="js/site-analytics.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/locus-chamber.css?v=synapse-r10-back-fix">
 </head>
-<body data-sketches="locus-chamber">
+<body class="locus-page" data-sketches="locus-chamber">
 
   <header class="site-header">
     <a class="site-header__logo" href="index.html">Alice Tsvetkova</a>
     <nav class="site-header__nav">
-      <a href="index.html#cases">Case Studies</a>
-      <a href="index.html#ideas">Ideas &amp; Vision</a>
+      <a href="index.html#cases">Selected Product Cases</a>
+      <a href="index.html#ideas">Personal Product Vision</a>
+      <a href="index.html#about">About me</a>
+      <a class="site-header__nav--resume" href="assets/resume/Tsvetkova-Product.pdf" target="_blank" rel="noopener noreferrer" download="Tsvetkova-Alice-Product-Manager-Resume.pdf">Resume (PDF)</a>
     </nav>
   </header>
 
-  <main class="case-detail">
-    <a class="case-detail__back" href="index.html#ideas">← Back to ideas &amp; vision</a>
-    <p class="case-detail__label">Ideas &amp; Vision · Product Idea</p>
+  <svg class="locus-svg-filters" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="locusRoomSharpen" x="-2%" y="-2%" width="104%" height="104%">
+        <feConvolveMatrix order="3" kernelMatrix="0 -0.6 0 -0.6 3.4 -0.6 0 -0.6 0"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <div class="locus-intro case-detail">
+    <a class="case-detail__back" href="index.html#ideas">← Back to personal product vision</a>
+    <p class="case-detail__label">Personal Product Vision · Product Idea</p>
     <h1>Locus Chamber</h1>
     <p>A digital space for memory.</p>
+  </div>
 
-    <section>
-      <h2>Problem</h2>
-      <!-- content -->
+  <div class="locus-main">
+    <nav class="locus-section-nav" data-locus-section-nav aria-label="Locus Chamber sections">
+      <button type="button" class="locus-section-nav__item locus-section-nav__item--active" data-locus-section="product" aria-current="page">
+        About the product
+      </button>
+      <button type="button" class="locus-section-nav__item" data-locus-section="discovery" aria-current="false">
+        Discovery
+      </button>
+      <button type="button" class="locus-section-nav__item" data-locus-section="evolution" aria-current="false">
+        Evolution
+      </button>
+    </nav>
+
+    <section class="locus-section locus-section--active" data-locus-section-panel="product" aria-label="About the product">
+      <div class="locus-experience" data-locus-experience>
+        <button type="button" class="locus-back" data-locus-back hidden aria-label="Previous slide">
+          <svg class="locus-back__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
+        <div class="locus-stage">
+          <div class="locus-stage__media locus-stage__media--empty" data-locus-image-wrap>
+            <div class="locus-slide-frame" data-locus-frame>
+              <img class="locus-stage__image" data-locus-image alt="" width="1024" height="682">
+              <div class="locus-slide-overlays" data-locus-overlays aria-hidden="true"></div>
+            </div>
+            <div class="locus-compose" data-locus-compose hidden></div>
+          </div>
+
+          <div class="locus-stage__body" data-locus-body>
+            <h2 class="locus-stage__title" data-locus-title></h2>
+            <p class="locus-stage__caption" data-locus-caption></p>
+            <div class="locus-stage__choices" data-locus-choices hidden></div>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <section>
-      <h2>Hypothesis</h2>
-      <!-- content -->
+    <section class="locus-section" data-locus-section-panel="discovery" hidden aria-label="Discovery">
+      <div class="locus-outline">
+        <h2>Discovery</h2>
+        <p class="locus-outline__intro">Problem · Hypothesis · Research · Jobs to be done — will be filled alongside the prototype.</p>
+
+        <h3>Problem</h3>
+        <p><!-- content --></p>
+
+        <h3>Hypothesis</h3>
+        <p><!-- content --></p>
+
+        <h3>Research</h3>
+        <p><!-- content --></p>
+
+        <h3>JTBD</h3>
+        <p><!-- content --></p>
+      </div>
     </section>
 
-    <section>
-      <h2>Research</h2>
-      <!-- content -->
-    </section>
+    <section class="locus-section" data-locus-section-panel="evolution" hidden aria-label="Evolution">
+      <div class="locus-outline">
+        <h2>Evolution</h2>
+        <p class="locus-outline__intro">MVP · Monetization · Roadmap — will be filled alongside the prototype.</p>
 
-    <section>
-      <h2>JTBD</h2>
-      <!-- content -->
-    </section>
+        <h3>MVP</h3>
+        <p><!-- content --></p>
 
-    <section>
-      <h2>MVP</h2>
-      <!-- content -->
-    </section>
+        <h3>Monetization</h3>
+        <p><!-- content --></p>
 
-    <section>
-      <h2>Monetization</h2>
-      <!-- content -->
+        <h3>Roadmap</h3>
+        <p><!-- content --></p>
+      </div>
     </section>
-
-    <section>
-      <h2>Roadmap</h2>
-      <!-- content -->
-    </section>
-  </main>
+  </div>
 
   <footer class="site-footer">
     <p>© Alice Tsvetkova · Product Manager</p>
   </footer>
 
-  <script src="js/sketch-bg.js"></script>
+  <script src="js/sketch-bg.js?v=spear-fix"></script>
+  <script src="js/locus-golden-thread.js?v=reveal-sync"></script>
+  <script src="js/locus-room-image.js"></script>
+  <script src="js/locus-chamber-compose.js?v=cursor-demo-en"></script>
+  <script src="js/locus-chamber-reveal.js?v=exit-stable"></script>
+  <script src="js/locus-chamber-castle.js?v=back-reset"></script>
+  <script src="js/locus-chamber.js"></script>
+  <script src="js/locus-chamber-player.js?v=living-room-pause"></script>
+  <script src="js/locus-chamber-sections.js?v=section-fix"></script>
 </body>
 </html>

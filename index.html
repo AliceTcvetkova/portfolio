@@ -5,9 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Tsvetkova Alice — Product Manager. FinTech, EdTech, digital products and worlds.">
   <title>Alice Tsvetkova · Product Manager</title>
+  <script src="js/site-config.js"></script>
+  <script src="js/site-analytics.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="prefetch" href="assets/resume/Tsvetkova-Product.pdf">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-sketches="home">
@@ -15,21 +18,30 @@
   <header class="site-header">
     <a class="site-header__logo" href="index.html">Alice Tsvetkova</a>
     <nav class="site-header__nav">
-      <a href="#cases">Case Studies</a>
-      <a href="#ideas">Ideas &amp; Vision</a>
+      <a href="#cases">Selected Product Cases</a>
+      <a href="#ideas">Personal Product Vision</a>
+      <a href="#about">About me</a>
+      <a class="site-header__nav--resume" href="assets/resume/Tsvetkova-Product.pdf" target="_blank" rel="noopener noreferrer" download="Tsvetkova-Alice-Product-Manager-Resume.pdf">Resume (PDF)</a>
     </nav>
   </header>
 
   <section class="hero">
-    <img class="hero__photo" src="assets/photo.png" alt="Alice Tsvetkova" width="280" height="280">
+    <img class="hero__photo" src="assets/photo.png" alt="Alice Tsvetkova" width="280" height="280" fetchpriority="high" decoding="async">
     <h1 class="hero__name">Tsvetkova Alice</h1>
     <p class="hero__role">Product Manager</p>
+    <p class="hero__proof">EdTech · FinTech · Platform PM · 100+ interviews</p>
     <p class="hero__tagline">Building systems, products and digital worlds.</p>
     <div class="hero__actions">
-      <a class="btn btn--primary" href="#cases">Case Studies</a>
-      <a class="btn" href="#ideas">Ideas &amp; Experiments</a>
-      <a class="btn" href="https://www.linkedin.com/in/alice-tsvetkova" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+      <a class="btn btn--resume" href="assets/resume/Tsvetkova-Product.pdf" target="_blank" rel="noopener noreferrer" download="Tsvetkova-Alice-Product-Manager-Resume.pdf">Resume (PDF)</a>
+      <a class="btn btn--linkedin" href="https://www.linkedin.com/in/alice-tsvetkova" target="_blank" rel="noopener noreferrer" aria-label="Alice Tsvetkova on LinkedIn (opens in new tab)">LinkedIn</a>
+      <a class="btn" href="#cases">Selected Product Cases</a>
+      <a class="btn" href="#ideas">Personal Product Vision</a>
     </div>
+  </section>
+
+  <section class="about" id="about">
+    <h2 class="about__title">About me</h2>
+    <p class="about__text">Product manager with experience in EdTech, FinTech and large-scale platform initiatives. Passionate about product discovery, game systems and digital knowledge spaces.</p>
   </section>
 
   <div class="stats">
@@ -56,15 +68,14 @@
   </div>
 
   <section class="section" id="cases">
-    <span class="section__label">Work</span>
-    <h2 class="section__title">Case Studies</h2>
+    <h2 class="section__title">Selected Product Cases</h2>
 
     <ul class="cards">
       <li>
         <a class="card" href="irpo.html">
           <span class="card__org">EdTech</span>
           <h3 class="card__title">Institute for the Development of Vocational Education (IRPO)</h3>
-          <p class="card__desc">Federal platform for vocational education and a nationwide digital content ecosystem.</p>
+          <p class="card__desc"><span class="card__outcome">Federal EdTech platform · 130 teams nationwide.</span> Unified vocational education platform and a nationwide digital content ecosystem.</p>
           <ul class="card__metrics">
             <li>100+ interviews</li>
             <li>400+ standards</li>
@@ -78,7 +89,7 @@
         <a class="card" href="ozon-bank.html">
           <span class="card__org">Ozon Bank</span>
           <h3 class="card__title">Ozon Bank</h3>
-          <p class="card__desc">Launching financial products and managing complex cross-team releases.</p>
+          <p class="card__desc"><span class="card__outcome">20+ teams aligned · release saved.</span> Launching financial products and managing complex cross-team releases.</p>
           <ul class="card__metrics">
             <li>20+ teams</li>
             <li>Prevented release delay</li>
@@ -90,7 +101,7 @@
         <a class="card" href="vk.html">
           <span class="card__org">VK</span>
           <h3 class="card__title">VK</h3>
-          <p class="card__desc">Building a unified product data and development management system.</p>
+          <p class="card__desc"><span class="card__outcome">~20M RUB potential savings.</span> Building a unified product data and development management system.</p>
           <ul class="card__metrics">
             <li>~20M RUB potential savings</li>
           </ul>
@@ -101,8 +112,7 @@
   </section>
 
   <section class="section section--ideas" id="ideas">
-    <span class="section__label">Exploration</span>
-    <h2 class="section__title">Ideas &amp; Vision</h2>
+    <h2 class="section__title">Personal Product Vision</h2>
 
     <ul class="cards">
       <li>
