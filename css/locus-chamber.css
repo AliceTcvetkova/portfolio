@@ -2055,6 +2055,250 @@
   padding: 0.5rem 0 0.5rem;
 }
 
+.locus-outline--discovery {
+  max-width: var(--max);
+}
+
+.locus-outline-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(110px, 21%);
+  gap: 1.5rem 2rem;
+  align-items: center;
+  margin: 0 0 2rem;
+}
+
+.locus-outline-row--reverse {
+  direction: rtl;
+}
+
+.locus-outline-row--reverse > * {
+  direction: ltr;
+}
+
+.locus-outline-row__content {
+  min-width: 0;
+}
+
+.locus-outline-row__content > h4:first-child {
+  margin-top: 0;
+}
+
+.locus-outline-row__content ul,
+.locus-outline-row__content ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+.locus-outline-row__figure {
+  margin: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+}
+
+.locus-outline-row__figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.locus-outline-row__figure--tall img {
+  max-height: 210px;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.locus-outline-row__figure--grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--bg-elevated);
+}
+
+.locus-outline-row__figure--grid img {
+  border-radius: calc(var(--radius-lg) - 4px);
+  border: 1px solid var(--border);
+}
+
+.locus-outline-row--stretch {
+  align-items: stretch;
+}
+
+.locus-outline-row__figure--portrait {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 100%;
+}
+
+.locus-outline-row__figure--portrait img {
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: contain;
+  object-position: center top;
+}
+
+.locus-outline-row__figure--plain {
+  border: none;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+  justify-self: end;
+  align-self: start;
+}
+
+.locus-outline-row__figure--plain img {
+  width: auto;
+  max-width: 100%;
+}
+
+.locus-outline-subsections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.locus-outline-sub h5 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+  color: var(--text);
+}
+
+.locus-outline-sub p {
+  margin: 0 0 0.5rem;
+}
+
+.locus-outline-sub p:last-child,
+.locus-outline-sub ul:last-child {
+  margin-bottom: 0;
+}
+
+.locus-outline-sub ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.locus-outline-sub__lead {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.locus-outline-sub strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.locus-outline--discovery > h4 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 1.75rem 0 0.5rem;
+  color: var(--text);
+}
+
+.locus-outline--discovery > h4:first-of-type {
+  margin-top: 0;
+}
+
+.locus-outline--discovery > p {
+  margin: 0 0 1.5rem;
+}
+
+.locus-outline-feature {
+  margin: 0 0 2rem;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+}
+
+.locus-outline-feature img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.locus-outline-feature__caption {
+  padding: 0.65rem 1rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+}
+
+.locus-outline-video {
+  margin: 0 0 2rem;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #000;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+}
+
+.locus-outline-video__player {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: top;
+}
+
+.locus-outline-video__caption {
+  padding: 0.65rem 1rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+}
+
+.locus-outline-scope {
+  display: grid;
+  gap: 1rem;
+}
+
+.locus-outline-scope__group h6 {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.locus-outline-scope__group ul {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.locus-outline__quote--hypothesis {
+  margin-top: 0.25rem;
+}
+
+.locus-outline__quote-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  margin: 0 0 0.5rem;
+}
+
+.locus-outline-row .locus-outline__quote {
+  margin: 0;
+}
+
 .locus-outline h2 {
   font-size: 1.25rem;
   font-weight: 600;
@@ -2076,10 +2320,96 @@
   margin: 2rem 0 0.5rem;
 }
 
+.locus-outline h3:first-of-type {
+  margin-top: 0;
+}
+
+.locus-outline h4 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.35rem;
+  color: var(--text);
+}
+
 .locus-outline p {
   color: var(--text-muted);
   font-size: 0.9375rem;
   line-height: 1.6;
   margin: 0;
-  min-height: 1.5rem;
+  min-height: 0;
+}
+
+.locus-outline ul,
+.locus-outline ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+.locus-outline li + li {
+  margin-top: 0.35rem;
+}
+
+.locus-outline-personas {
+  list-style: none;
+  padding-left: 0;
+}
+
+.locus-outline-personas > li + li {
+  margin-top: 1.25rem;
+}
+
+.locus-outline-personas strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.locus-outline-personas p {
+  margin: 0;
+}
+
+.locus-outline__quote {
+  margin: 0.5rem 0 0;
+  padding: 1rem 1.25rem;
+  border-left: 3px solid rgba(113, 112, 255, 0.45);
+  background: rgba(113, 112, 255, 0.06);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.locus-outline__quote p {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 820px) {
+  .locus-outline-row,
+  .locus-outline-row--reverse {
+    grid-template-columns: 1fr;
+    direction: ltr;
+  }
+
+  .locus-outline-row__figure {
+    max-width: 210px;
+  }
+
+  .locus-outline-row__figure--portrait {
+    justify-content: center;
+    min-height: auto;
+  }
+
+  .locus-outline-row__figure--portrait img {
+    height: auto;
+    max-height: 360px;
+  }
+
+  .locus-outline-row__figure--tall img {
+    max-height: 160px;
+  }
 }

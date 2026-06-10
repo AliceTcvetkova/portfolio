@@ -77,21 +77,237 @@
     </section>
 
     <section class="locus-section" data-locus-section-panel="discovery" hidden aria-label="Discovery">
-      <div class="locus-outline">
+      <div class="locus-outline locus-outline--discovery">
         <h2>Discovery</h2>
-        <p class="locus-outline__intro">Problem · Hypothesis · Research · Jobs to be done — will be filled alongside the prototype.</p>
+        <p class="locus-outline__intro">A structured product thinking case — competitor review, hypothesis framing, and a validation plan. Built to show how I would approach discovery before building.</p>
 
-        <h3>Problem</h3>
-        <p><!-- content --></p>
+        <h3>1. Discovery</h3>
 
-        <h3>Hypothesis</h3>
-        <p><!-- content --></p>
+        <h4>Goal</h4>
+        <p>Define what must be true for a visual memory space to beat folders and cloud storage — and what to test first.</p>
 
-        <h3>Research</h3>
-        <p><!-- content --></p>
+        <h4>Research Activities</h4>
+        <div class="locus-outline-row">
+          <div class="locus-outline-row__content locus-outline-subsections">
+            <section class="locus-outline-sub">
+              <h5>Competitor analysis</h5>
+              <p class="locus-outline-sub__lead">Market map across cloud storage, local drives, specialized tools, and device libraries.</p>
+              <ul>
+                <li><strong>Cloud storage (corporate segment):</strong> Yandex Disk, Google Drive, Mail.ru Cloud, iCloud — mature sharing workflows, but hard to audit quickly at scale.</li>
+                <li><strong>Local storage:</strong> SSD and hard drives.</li>
+                <li><strong>Specialized services:</strong> mindpalace.ai.</li>
+                <li><strong>Device-native storage:</strong> phone and camera libraries.</li>
+              </ul>
+              <p><strong>Strengths:</strong> integrated with other services, familiar UX, low setup effort, wide device access.</p>
+              <p><strong>Weaknesses:</strong> slow retrieval, cluttered libraries, little meta-context, paid tiers for large volumes.</p>
+            </section>
+            <section class="locus-outline-sub">
+              <h5>Hypothesis formation</h5>
+              <p><strong>Main hypothesis:</strong> users will engage with a visual, customizable storage system that surfaces memories and information in a personal, interactive way.</p>
+              <p><strong>What would falsify the idea:</strong> users are satisfied with folders and the real pain is storage volume, not rediscovery or reuse.</p>
+            </section>
+            <section class="locus-outline-sub">
+              <h5>Planned user interviews</h5>
+              <p>8–10 one-on-one sessions with memory keepers and knowledge collectors — to test storage habits, emotional attachment, and reactions to a spatial approach.</p>
+            </section>
+            <section class="locus-outline-sub">
+              <h5>Planned prototype validation</h5>
+              <p>Guided walkthroughs with a clickable room: can users place artifacts, return after a week, and find what they saved faster than in a folder?</p>
+            </section>
+          </div>
+          <figure class="locus-outline-row__figure locus-outline-row__figure--plain">
+            <img src="assets/locus-chamber/discovery/research-competitors.png" alt="Medieval illustration of competitor research" width="160" height="160" loading="lazy">
+          </figure>
+        </div>
 
-        <h3>JTBD</h3>
-        <p><!-- content --></p>
+        <h4>Working Hypotheses</h4>
+        <div class="locus-outline-row">
+          <div class="locus-outline-row__content">
+            <p class="locus-outline-sub__lead">Derived from competitor review and problem framing — to be confirmed or rejected in interviews and prototype tests.</p>
+            <ul>
+              <li>People accumulate more saved material than they ever revisit.</li>
+              <li>Existing tools optimize for filing, not for coming back to what was saved.</li>
+              <li>Users care about memories and meaning more than about file types.</li>
+              <li>A spatial approach may attract interest, but only if setup and retrieval stay simple.</li>
+            </ul>
+          </div>
+          <figure class="locus-outline-row__figure locus-outline-row__figure--plain">
+            <img src="assets/locus-chamber/discovery/findings-pain-points.png" alt="Medieval illustration representing user pain with current storage" width="160" height="160" loading="lazy">
+          </figure>
+        </div>
+
+        <h3>2. Product Thinking</h3>
+
+        <h4>Jobs To Be Done</h4>
+        <div class="locus-outline-row">
+          <div class="locus-outline-row__content locus-outline-subsections">
+            <section class="locus-outline-sub">
+              <h5>Primary Job</h5>
+              <p>Preserve knowledge and memories in a way that makes them easy to rediscover and reuse.</p>
+            </section>
+            <section class="locus-outline-sub">
+              <h5>Functional Jobs</h5>
+              <ul>
+                <li>Organize information.</li>
+                <li>Find saved content quickly.</li>
+                <li>Connect related ideas.</li>
+                <li>Build a personal knowledge space.</li>
+              </ul>
+            </section>
+            <section class="locus-outline-sub">
+              <h5>Emotional Jobs</h5>
+              <ul>
+                <li>Feel that important memories are not lost.</li>
+                <li>Enjoy revisiting past experiences.</li>
+                <li>Create a meaningful personal archive.</li>
+              </ul>
+            </section>
+          </div>
+          <figure class="locus-outline-row__figure locus-outline-row__figure--plain">
+            <img src="assets/locus-chamber/discovery/jtbd-hypothesis.png" alt="Medieval marginalia illustration for jobs to be done" width="140" height="180" loading="lazy">
+          </figure>
+        </div>
+
+        <div class="locus-outline-row locus-outline-row--stretch">
+          <div class="locus-outline-row__content">
+            <h4>Personas</h4>
+            <ul class="locus-outline-personas">
+              <li>
+                <strong>Researcher / Learner</strong>
+                <p>When I'm exploring a new topic, I want to connect the materials I find so I can build a coherent understanding of the subject.</p>
+              </li>
+              <li>
+                <strong>Creative</strong>
+                <p>When I'm gathering inspiration for a project, I want to see ideas in context and space so I can discover new connections more easily.</p>
+              </li>
+              <li>
+                <strong>Memory keeper</strong>
+                <p>When important moments happen in my life, I want to preserve them in a form that evokes emotion and helps me relive those moments.</p>
+              </li>
+            </ul>
+          </div>
+          <figure class="locus-outline-row__figure locus-outline-row__figure--plain locus-outline-row__figure--portrait">
+            <img src="assets/locus-chamber/discovery/personas-bookworm.png" alt="The Bookworm — persona metaphor for deep information collectors" width="480" height="640" loading="lazy">
+          </figure>
+        </div>
+
+        <h4>Roadmap</h4>
+        <figure class="locus-outline-feature">
+          <img src="assets/locus-chamber/discovery/roadmap-memory-keeper.png" alt="The Road of the Memory Keeper — Locus Chamber product roadmap from research to infinite archive" width="1120" height="1580" loading="lazy">
+          <figcaption class="locus-outline-feature__caption">The Road of the Memory Keeper</figcaption>
+        </figure>
+
+        <div class="locus-outline-row">
+          <div class="locus-outline-row__content locus-outline-subsections">
+            <h4>MVP</h4>
+            <section class="locus-outline-sub">
+              <h5>MVP Scope</h5>
+              <div class="locus-outline-scope">
+                <div class="locus-outline-scope__group">
+                  <h6>Room Creation</h6>
+                  <ul>
+                    <li>Create a room</li>
+                    <li>Choose a room template (library, study)</li>
+                  </ul>
+                </div>
+                <div class="locus-outline-scope__group">
+                  <h6>Artifact Placement</h6>
+                  <ul>
+                    <li>Upload images</li>
+                    <li>Upload notes</li>
+                    <li>Place them in the room</li>
+                  </ul>
+                </div>
+                <div class="locus-outline-scope__group">
+                  <h6>Navigation</h6>
+                  <ul>
+                    <li>Move around the room</li>
+                    <li>Zoom in on objects</li>
+                  </ul>
+                </div>
+                <div class="locus-outline-scope__group">
+                  <h6>Basic Associations</h6>
+                  <ul>
+                    <li>Link object to object</li>
+                    <li>Add a description</li>
+                  </ul>
+                </div>
+                <div class="locus-outline-scope__group">
+                  <h6>Save &amp; Return</h6>
+                  <ul>
+                    <li>Save the room</li>
+                    <li>Return later</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+            <blockquote class="locus-outline__quote locus-outline__quote--hypothesis">
+              <p class="locus-outline__quote-label">Main MVP hypothesis</p>
+              <p>Users find spatial organization more intuitive and memorable than traditional folders for personal knowledge and memories.</p>
+            </blockquote>
+          </div>
+          <figure class="locus-outline-row__figure locus-outline-row__figure--grid">
+            <img src="assets/locus-chamber/discovery/mvp-room-classic.png" alt="MVP room concept — classic library" width="320" height="240" loading="lazy">
+            <img src="assets/locus-chamber/discovery/mvp-room-coastal.png" alt="MVP room concept — coastal study with fisheye view" width="320" height="240" loading="lazy">
+            <img src="assets/locus-chamber/discovery/mvp-room-scrapbook.png" alt="MVP room concept — scrapbook workspace" width="320" height="240" loading="lazy">
+          </figure>
+        </div>
+
+        <h4>Risks</h4>
+        <div class="locus-outline-row">
+          <div class="locus-outline-row__content locus-outline-subsections">
+            <section class="locus-outline-sub">
+              <h5>1. False Problem Risk</h5>
+              <p><strong>The most dangerous.</strong> Users like the idea, but are actually satisfied with Google Drive and Notion.</p>
+            </section>
+            <section class="locus-outline-sub">
+              <h5>2. Novelty Risk</h5>
+              <p>Users play with the room for the first 10 minutes, then lose interest.</p>
+            </section>
+            <section class="locus-outline-sub">
+              <h5>3. Setup Effort Risk</h5>
+              <p>Creating a room takes more effort than organizing files the usual way. If a user needs an hour to arrange objects, the product loses to folders — though for some, this becomes a new kind of play.</p>
+            </section>
+            <section class="locus-outline-sub">
+              <h5>4. Retrieval Risk</h5>
+              <p>Users enjoy placing information, but do not find it faster afterward.</p>
+            </section>
+            <section class="locus-outline-sub">
+              <h5>5. Scalability Risk</h5>
+              <p>Spatial organization works well for ~50 objects, but becomes unwieldy at 500–5,000.</p>
+            </section>
+            <section class="locus-outline-sub">
+              <h5>6. Willingness To Pay Risk</h5>
+              <p>Users find the product interesting, but are not ready to pay for it.</p>
+            </section>
+          </div>
+          <figure class="locus-outline-row__figure locus-outline-row__figure--plain">
+            <img src="assets/locus-chamber/discovery/risks.png" alt="Medieval lion illustration representing product risks" width="160" height="160" loading="lazy">
+          </figure>
+        </div>
+
+        <h3>3. Insights</h3>
+        <div class="locus-outline-row locus-outline-row--stretch">
+          <blockquote class="locus-outline__quote locus-outline-row__content">
+            <p class="locus-outline__quote-label">Problem reframe (working)</p>
+            <p>People rarely struggle with storing files, but often struggle with reusing saved information — so the product should optimize for rediscovery, not storage.</p>
+          </blockquote>
+          <figure class="locus-outline-row__figure locus-outline-row__figure--plain">
+            <img src="assets/locus-chamber/discovery/insights-searching.png" alt="Medieval figure struggling to organize — Suffering Middle Ages style" width="852" height="442" loading="lazy">
+          </figure>
+        </div>
+
+        <h3>4. Next Steps</h3>
+        <div class="locus-outline-row">
+          <ol class="locus-outline-row__content">
+            <li>Run 8–10 interviews: is reuse — not storage — the real unmet job?</li>
+            <li>Prototype test: time-to-find vs. a folder baseline after 7 days.</li>
+            <li>Pricing smoke test: would memory keepers pay for a persistent room and templates?</li>
+          </ol>
+          <figure class="locus-outline-row__figure locus-outline-row__figure--plain">
+            <img src="assets/locus-chamber/discovery/next-steps-validation.png" alt="Medieval marginalia illustration for validation next steps" width="160" height="160" loading="lazy">
+          </figure>
+        </div>
       </div>
     </section>
 
