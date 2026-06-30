@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Eco Clean Map">
+  <rect width="512" height="512" rx="96" fill="#20372f"/>
+  <circle cx="256" cy="220" r="120" fill="#6f8f63" opacity="0.35"/>
+  <circle cx="256" cy="220" r="88" fill="#fff7e8"/>
+  <path d="M256 152c-38 0-68 30-68 68 0 52 68 120 68 120s68-68 68-120c0-38-30-68-68-68z" fill="#6fa36f"/>
+  <circle cx="256" cy="220" r="22" fill="#3f6f4c"/>
+  <rect x="96" y="360" width="320" height="72" rx="24" fill="#6fa36f"/>
+  <text x="256" y="408" text-anchor="middle" fill="#fff" font-family="Inter, sans-serif" font-size="28" font-weight="600">Clean Map</text>
+</svg>

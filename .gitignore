@@ -1,0 +1,5 @@
+node_modules/
+scripts/_pptx.zip
+scripts/_pptx_extract/
+scripts/.assemble-debug/
+scripts/.assemble-tmp/

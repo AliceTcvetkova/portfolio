@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font: 13px/1.45 Inter, system-ui, sans-serif;
+      margin: 16px;
+      color: #24362d;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+    p {
+      margin: 0 0 10px;
+      color: #75806f;
+    }
+    code {
+      font-size: 11px;
+      background: #f4ead2;
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+    .meta {
+      margin: 12px 0;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #fff7e8;
+      border: 1px solid #e6d9bd;
+      font-size: 12px;
+    }
+    .meta strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    button {
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 10px;
+      background: #6fa36f;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #f4ead2;
+      color: #3f6f4c;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    #log {
+      margin-top: 12px;
+      white-space: pre-wrap;
+      font-size: 11px;
+      color: #75806f;
+      max-height: 140px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Clean Map → PWA export</h1>
+  <p>Connects your Figma file to the repo: exports <code>fileKey</code>, screen node IDs, PNG previews, and design tokens.</p>
+
+  <div class="meta" id="meta">
+    <strong>File</strong>
+    <span id="file-label">Run “Inspect file” to detect Clean Map screens.</span>
+  </div>
+
+  <div class="actions">
+    <button id="inspect" class="secondary">Inspect file</button>
+    <button id="config">Export config + tokens (JSON)</button>
+    <button id="png">Export screens (PNG @2x)</button>
+  </div>
+
+  <div id="log"></div>
+
+  <script>
+    const log = document.getElementById("log");
+    const meta = document.getElementById("file-label");
+    const buttons = Array.from(document.querySelectorAll("button"));
+    let pending = 0;
+
+    function write(msg) {
+      log.textContent += msg + "\n";
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function setBusy(busy) {
+      buttons.forEach(function (btn) {
+        btn.disabled = busy;
+      });
+    }
+
+    function downloadJson(fileName, payload) {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    window.onmessage = function (event) {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      if (msg.type === "log") {
+        write(msg.text);
+        return;
+      }
+
+      if (msg.type === "inspect-result") {
+        setBusy(false);
+        meta.innerHTML =
+          "<strong>" + msg.fileName + "</strong>" +
+          "fileKey: <code>" + msg.fileKey + "</code><br>" +
+          "Screens found: " + msg.found + " / " + msg.total +
+          (msg.missing.length ? "<br>Missing: " + msg.missing.join(", ") : "");
+        return;
+      }
+
+      if (msg.type === "start") {
+        pending = msg.count;
+        return;
+      }
+
+      if (msg.type === "json") {
+        downloadJson(msg.fileName, msg.payload);
+        write("Downloaded " + msg.fileName);
+        return;
+      }
+
+      if (msg.type === "file") {
+        const bytes = new Uint8Array(msg.bytes);
+        const blob = new Blob([bytes], { type: "image/png" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = msg.fileName;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        pending -= 1;
+        if (pending <= 0) {
+          setBusy(false);
+          write("PNG export done. Move files to assets/clean-map/figma-export/");
+        }
+        return;
+      }
+
+      if (msg.type === "error") {
+        setBusy(false);
+        write("Error: " + msg.text);
+      }
+    };
+
+    function send(type) {
+      setBusy(true);
+      log.textContent = "";
+      parent.postMessage({ pluginMessage: { type: type } }, "*");
+    }
+
+    document.getElementById("inspect").onclick = function () {
+      send("inspect");
+    };
+    document.getElementById("config").onclick = function () {
+      send("export-config");
+      setTimeout(function () {
+        setBusy(false);
+      }, 800);
+    };
+    document.getElementById("png").onclick = function () {
+      send("export-png");
+    };
+  </script>
+</body>
+</html>

@@ -2,10 +2,20 @@
  * Clean Map - MVP mobile app templates.
  * Visual direction: soft East Asian pastoral storybook UI.
  *
- * Figma:
- * Plugins > Development > Import plugin from manifest...
- * Select scripts/figma-clean-map-screens/manifest.json
- * Run "Clean Map - MVP Mobile Screens"
+ * Figma workflow (Clean Map App):
+ * 1. Figma → New design file → rename to "Clean Map App"
+ * 2. Plugins → Development → Import plugin from manifest…
+ *    → scripts/figma-clean-map-screens/manifest.json
+ *    → Run "Clean Map - MVP Mobile Screens" (creates 8 frames)
+ * 3. Import scripts/figma-clean-map-export/manifest.json
+ *    → Run "Clean Map — Export for PWA"
+ *    → Inspect file → Export config + tokens → Export PNG screens
+ * 4. Save clean-map-figma.config.json → scripts/
+ *    Save PNGs → assets/clean-map/figma-export/
+ *    Save figma-tokens.json → app/js/ (optional)
+ * 5. CLI re-export (optional):
+ *    set FIGMA_ACCESS_TOKEN=figd_...
+ *    node scripts/export-clean-map-figma.mjs
  */
 
 const APP_PREFIX = "Clean Map - ";

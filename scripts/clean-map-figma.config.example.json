@@ -1,0 +1,24 @@
+{
+  "fileKey": "REPLACE_WITH_FILE_KEY",
+  "fileName": "Clean Map App",
+  "figmaUrl": "https://www.figma.com/design/REPLACE_WITH_FILE_KEY/Clean-Map-App",
+  "exportedAt": "2026-01-01T00:00:00.000Z",
+  "appPrefix": "Clean Map - ",
+  "colors": {
+    "bg": "#20372f",
+    "surface": "#2f4b3c",
+    "card": "#fff7e8",
+    "green": "#6fa36f",
+    "greenDark": "#3f6f4c"
+  },
+  "screens": [
+    {
+      "name": "Clean Map - 01 Onboarding",
+      "slug": "onboarding",
+      "nodeId": "0:0",
+      "file": "01-onboarding.png",
+      "width": 390,
+      "height": 844
+    }
+  ]
+}

@@ -626,6 +626,50 @@ button,
   opacity: 0.85;
 }
 
+.clean-map-install {
+  max-width: var(--max);
+  margin: 1.5rem auto 0;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.clean-map-install p {
+  margin: 0 0 0.75rem;
+}
+
+.clean-map-install__local {
+  font-size: 0.875rem;
+  color: var(--text-subtle);
+}
+
+.clean-map-install__qr {
+  display: block;
+  margin-top: 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.clean-map-screens {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.5rem;
+  max-width: var(--max);
+  margin: 2rem auto 0;
+  padding: 0 1.5rem;
+}
+
+.clean-map-screens .case-figure {
+  margin: 0;
+  padding: 0;
+}
+
+.clean-map-screens .case-figure img {
+  max-width: 280px;
+  margin: 0 auto;
+}
+
 .case-figure--after {
   margin-top: -1.5rem;
   margin-bottom: 4rem;

@@ -1,0 +1,49 @@
+{
+  "source": "figma-clean-map-export",
+  "fileKey": "1FTIDwTTELmCK3l4rh2Mla",
+  "figmaUrl": "https://www.figma.com/design/1FTIDwTTELmCK3l4rh2Mla/Clean-Map-App",
+  "exportedAt": "2026-06-27T19:54:16.627Z",
+  "assetBase": "../assets/clean-map/figma-export/",
+  "colors": {
+    "bg": "#20372f",
+    "surface": "#2f4b3c",
+    "surface2": "#476a50",
+    "card": "#fff7e8",
+    "cardMuted": "#f4ead2",
+    "text": "#24362d",
+    "muted": "#75806f",
+    "white": "#ffffff",
+    "green": "#6fa36f",
+    "greenDark": "#3f6f4c",
+    "lime": "#d8e6a3",
+    "amber": "#d9955f",
+    "red": "#c96d5a",
+    "blue": "#91c9cf",
+    "border": "#e6d9bd",
+    "paper": "#fffaf0",
+    "peach": "#f1b58f",
+    "moss": "#6f8f63",
+    "mist": "#d8e6df"
+  },
+  "typography": {
+    "fontFamily": "Inter",
+    "weights": ["Regular", "Medium", "Semi Bold"]
+  },
+  "layout": {
+    "phoneWidth": 390,
+    "phoneHeight": 844,
+    "statusBar": 44,
+    "tabBar": 76,
+    "radius": 36
+  },
+  "screens": [
+    { "slug": "onboarding", "title": "01 Onboarding", "nodeId": "2:315", "file": "01-onboarding.png" },
+    { "slug": "map", "title": "02 Map", "nodeId": "2:365", "file": "02-map.png" },
+    { "slug": "report", "title": "03 Report Pollution", "nodeId": "2:418", "file": "03-report.png" },
+    { "slug": "task", "title": "04 Task Details", "nodeId": "2:462", "file": "04-task-details.png" },
+    { "slug": "proof", "title": "05 Upload Proof", "nodeId": "2:514", "file": "05-upload-proof.png" },
+    { "slug": "verify", "title": "06 AI Verification", "nodeId": "2:558", "file": "06-verification.png" },
+    { "slug": "profile", "title": "07 Profile Rewards", "nodeId": "2:596", "file": "07-profile.png" },
+    { "slug": "sponsor", "title": "08 Sponsor View", "nodeId": "2:642", "file": "08-sponsor.png" }
+  ]
+}
