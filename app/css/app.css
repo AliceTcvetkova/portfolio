@@ -1002,3 +1002,65 @@ body.figma-overlay-on .tab-bar {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.auth-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.auth-field input {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 0 14px;
+  color: var(--text);
+}
+
+.auth-toggle {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--subtitle);
+  text-align: center;
+}
+
+.auth-toggle button {
+  color: var(--lime);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.camera-preview--live {
+  cursor: pointer;
+  display: block;
+}
+
+.camera-preview--live img,
+.photo-card__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-card label {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+.photo-card input {
+  display: none;
+}

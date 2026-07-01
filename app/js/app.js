@@ -1,9 +1,11 @@
-import { FALLBACK_ROWS, PROFILE, CAMPAIGN, REPORT_CATEGORIES } from "./data.js";
+import { FALLBACK_ROWS, CAMPAIGN, REPORT_CATEGORIES } from "./data.js";
 import { loadFigmaTokens, applyFigmaTokens, figmaScreenAsset } from "./figma.js";
 import { DEV_MODE, MVP, appLocale, t } from "./mvp-settings.js";
 import { getSupabase } from "./supabase-client.js";
 import { loadTasksFromSupabase, normalizeTask, requestUserLocation, sortByDistance } from "./tasks-api.js";
 import { destroyMaps, mountLeafletMap } from "./leaflet-map.js";
+import { getSession, loadProfile, signIn, signUp, signOut } from "./auth.js";
+import { createReport, createSubmission } from "./reports-api.js";
 
 const state = {
   screen: "onboarding",
@@ -14,7 +16,17 @@ const state = {
   onboardingDone: localStorage.getItem("cleanMapOnboarded") === "1",
   figmaOverlay: localStorage.getItem("cleanMapFigmaOverlay") === "1",
   userLocation: null,
-  tasks: []
+  tasks: [],
+  session: null,
+  profile: null,
+  authMode: "login",
+  authReturn: "map",
+  reportPhotoFile: null,
+  reportPhotoUrl: null,
+  proofBeforeFile: null,
+  proofBeforeUrl: null,
+  proofAfterFile: null,
+  proofAfterUrl: null
 };
 
 let figmaData = null;
@@ -69,6 +81,46 @@ function showToast(message) {
   toastTimer = setTimeout(() => toastEl.classList.remove("is-visible"), 2200);
 }
 
+function profileInitial() {
+  const name = state.profile?.display_name || "U";
+  return name.charAt(0).toUpperCase();
+}
+
+function requireAuth(returnScreen) {
+  if (state.session) return true;
+  state.authReturn = returnScreen || state.screen;
+  state.authMode = "login";
+  state.screen = "auth";
+  showToast(t("needAuth"));
+  render();
+  return false;
+}
+
+function setPhotoFile(kind, file) {
+  const urlKey = kind + "Url";
+  const fileKey = kind + "File";
+  if (state[urlKey]) URL.revokeObjectURL(state[urlKey]);
+  state[fileKey] = file || null;
+  state[urlKey] = file ? URL.createObjectURL(file) : null;
+}
+
+function reportLocationText() {
+  const locale = appLocale();
+  if (!state.userLocation) return t("waitingGps");
+  const { lat, lng } = state.userLocation;
+  if (locale === "ru") return `${MVP.pilotCityRu} · ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  return `${MVP.pilotCity} · ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+
+async function refreshAuth() {
+  state.session = await getSession();
+  if (state.session) {
+    state.profile = await loadProfile(state.session.user.id);
+  } else {
+    state.profile = null;
+  }
+}
+
 function heroMapMarkup() {
   return `
     <div class="map-canvas">
@@ -108,7 +160,7 @@ function renderHeader(meta) {
           <h1 class="header__title">${meta.title}</h1>
           <p class="header__subtitle">${meta.subtitle}</p>
         </div>
-        ${meta.tab === "Profile" || meta.tab === "Home" ? "" : `<div class="avatar" aria-hidden="true">A</div>`}
+        ${meta.tab === "Profile" || meta.tab === "Home" ? "" : `<div class="avatar" aria-hidden="true">${profileInitial()}</div>`}
       </div>
     </header>
   `;
@@ -180,29 +232,70 @@ function renderMap() {
   `;
 }
 
+function renderAuth() {
+  const locale = appLocale();
+  const register = state.authMode === "register";
+  return `
+    <section class="screen screen--no-tabs is-active" data-screen="auth">
+      <div class="status-bar"><span>9:41</span><div class="status-bar__icons"><span class="status-bar__icon"></span><span class="status-bar__icon"></span><span class="status-bar__icon status-bar__icon--battery"></span></div></div>
+      ${renderHeader({
+        title: "Clean Map",
+        subtitle: register
+          ? (locale === "ru" ? "Создайте аккаунт" : "Create your account")
+          : (locale === "ru" ? "Войдите в аккаунт" : "Sign in to your account"),
+        tab: "Home"
+      })}
+      <div class="screen__body">
+        <div class="card">
+          <form class="auth-form" data-auth-form>
+            <div class="auth-field">
+              <label for="auth-username">${t("name")}</label>
+              <input id="auth-username" name="username" autocomplete="username" required minlength="2" maxlength="32">
+            </div>
+            <div class="auth-field">
+              <label for="auth-password">${t("password")}</label>
+              <input id="auth-password" name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" required minlength="6">
+            </div>
+            <button type="button" class="btn btn--primary btn--block" data-action="auth-submit">${register ? t("signUp") : t("signIn")}</button>
+          </form>
+          <p class="auth-toggle">
+            ${register ? (locale === "ru" ? "Уже есть аккаунт?" : "Have an account?") : (locale === "ru" ? "Нет аккаунта?" : "No account?")}
+            <button type="button" data-action="auth-toggle">${register ? t("signIn") : t("signUp")}</button>
+          </p>
+          <button type="button" class="btn btn--secondary btn--block" style="margin-top:12px" data-action="auth-skip">${locale === "ru" ? "Карта без входа" : "Browse map as guest"}</button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 function renderReport() {
+  const locale = appLocale();
   return `
     <section class="screen is-active" data-screen="report">
       <div class="status-bar"><span>9:41</span><div class="status-bar__icons"><span class="status-bar__icon"></span><span class="status-bar__icon"></span><span class="status-bar__icon status-bar__icon--battery"></span></div></div>
       ${renderHeader(screens.report)}
       <div class="screen__body">
-        <div class="camera-preview" role="img" aria-label="Camera preview">
-          <div class="camera-preview__placeholder"></div>
-          <div class="camera-preview__hills"></div>
-          <span class="camera-preview__label">Add photo</span>
-          <span class="camera-preview__shutter"></span>
-        </div>
+        <label class="camera-preview camera-preview--live">
+          <input type="file" accept="image/*" capture="environment" data-photo-input="report" hidden>
+          ${state.reportPhotoUrl
+            ? `<img src="${state.reportPhotoUrl}" alt="">`
+            : `<div class="camera-preview__placeholder"></div>
+               <div class="camera-preview__hills"></div>
+               <span class="camera-preview__label">${t("addPhoto")}</span>
+               <span class="camera-preview__shutter"></span>`}
+        </label>
         <div class="card" style="margin-top:16px">
-          <p class="card__label" style="color:var(--green-dark)">Location detected</p>
-          <h2 class="card__title">Northern Park, riverside path</h2>
-          <p class="card__label" style="margin-top:18px">Pollution category</p>
+          <p class="card__label" style="color:var(--green-dark)">${locale === "ru" ? "Локация" : "Location detected"}</p>
+          <h2 class="card__title">${reportLocationText()}</h2>
+          <p class="card__label" style="margin-top:18px">${locale === "ru" ? "Категория" : "Pollution category"}</p>
           <div class="chip-row">
             ${REPORT_CATEGORIES.map((label) => `
               <button type="button" class="chip${state.reportCategory === label ? " is-active" : ""}" data-category="${label}">${label}</button>
             `).join("")}
           </div>
-          <p class="card__meta" style="margin-top:16px">AI estimate: medium severity · suggested reward 240 pts</p>
-          <button type="button" class="btn btn--primary btn--block" style="margin-top:18px" data-action="submit-report">Submit report</button>
+          <p class="card__meta" style="margin-top:16px">${locale === "ru" ? "Награда после проверки:" : "Reward after review:"} ${MVP.rewardPoints} pts</p>
+          <button type="button" class="btn btn--primary btn--block" style="margin-top:18px" data-action="submit-report">${locale === "ru" ? "Отправить репорт" : "Submit report"}</button>
         </div>
       </div>
       ${renderTabBar("Report")}
@@ -235,24 +328,37 @@ function renderTask() {
 }
 
 function renderProof() {
+  const locale = appLocale();
   return `
     <section class="screen is-active" data-screen="proof">
       <div class="status-bar"><span>9:41</span><div class="status-bar__icons"><span class="status-bar__icon"></span><span class="status-bar__icon"></span><span class="status-bar__icon status-bar__icon--battery"></span></div></div>
       ${renderHeader(screens.proof)}
       <div class="screen__body">
         <div class="photo-grid">
-          <div class="photo-card photo-card--before"><strong>Before</strong><span class="photo-card__marker photo-card__marker--trash"></span></div>
-          <div class="photo-card photo-card--after"><strong>After</strong><span class="photo-card__marker photo-card__marker--clean"></span></div>
+          <div class="photo-card photo-card--before">
+            <strong>Before</strong>
+            <label>
+              <input type="file" accept="image/*" capture="environment" data-photo-input="proofBefore">
+              ${state.proofBeforeUrl ? `<img class="photo-card__img" src="${state.proofBeforeUrl}" alt="">` : `<span class="photo-card__marker photo-card__marker--trash"></span>`}
+            </label>
+          </div>
+          <div class="photo-card photo-card--after">
+            <strong>After</strong>
+            <label>
+              <input type="file" accept="image/*" capture="environment" data-photo-input="proofAfter">
+              ${state.proofAfterUrl ? `<img class="photo-card__img" src="${state.proofAfterUrl}" alt="">` : `<span class="photo-card__marker photo-card__marker--clean"></span>`}
+            </label>
+          </div>
         </div>
         <div class="card" style="margin-top:16px">
-          <h2 class="card__title">Proof checklist</h2>
+          <h2 class="card__title">${locale === "ru" ? "Чеклист" : "Proof checklist"}</h2>
           <ul class="checklist">
-            <li><span class="checklist__mark"></span>Same location</li>
-            <li><span class="checklist__mark"></span>After photo uploaded</li>
-            <li><span class="checklist__mark"></span>Waste removed</li>
-            <li><span class="checklist__mark"></span>Ready for AI check</li>
+            <li><span class="checklist__mark"></span>${locale === "ru" ? "Та же локация" : "Same location"}</li>
+            <li><span class="checklist__mark"></span>${locale === "ru" ? "Фото «после»" : "After photo uploaded"}</li>
+            <li><span class="checklist__mark"></span>${locale === "ru" ? "Мусор убран" : "Waste removed"}</li>
+            <li><span class="checklist__mark"></span>${locale === "ru" ? "На проверку" : "Ready for review"}</li>
           </ul>
-          <button type="button" class="btn btn--primary btn--block" style="margin-top:18px" data-action="send-proof">Send for verification</button>
+          <button type="button" class="btn btn--primary btn--block" style="margin-top:18px" data-action="send-proof">${locale === "ru" ? "Отправить на проверку" : "Send for verification"}</button>
         </div>
       </div>
       ${renderTabBar("Tasks")}
@@ -261,24 +367,26 @@ function renderProof() {
 }
 
 function renderVerify() {
-  const task = selectedTask();
-  const reward = task ? task.reward : MVP.rewardPoints;
+  const locale = appLocale();
   return `
     <section class="screen is-active" data-screen="verify">
       <div class="status-bar"><span>9:41</span><div class="status-bar__icons"><span class="status-bar__icon"></span><span class="status-bar__icon"></span><span class="status-bar__icon status-bar__icon--battery"></span></div></div>
-      ${renderHeader(screens.verify)}
+      ${renderHeader({
+        ...screens.verify,
+        title: locale === "ru" ? "Отправлено" : "Submitted",
+        subtitle: locale === "ru" ? "Ожидает проверки" : "Pending review"
+      })}
       <div class="screen__body">
         <div class="success">
-          <div class="success__glow"><div class="success__seal">OK</div></div>
-          <p class="success__text">AI comparison matched the cleanup result.</p>
+          <div class="success__glow"><div class="success__seal">…</div></div>
+          <p class="success__text">${locale === "ru" ? "Администратор проверит фото и начислит бонусы." : "An admin will review your photos and award points."}</p>
         </div>
         <div class="card" style="margin-top:16px">
-          <p class="card__label">Reward received</p>
-          <p class="card__title" style="font-size:34px;color:var(--green-dark)">+${reward} points</p>
-          <p class="card__meta">New badge: Riverside Cleaner</p>
+          <p class="card__label">${locale === "ru" ? "Статус" : "Status"}</p>
+          <p class="card__title" style="font-size:22px;color:var(--amber)">pending</p>
+          <p class="card__meta">${locale === "ru" ? `После approve: +${MVP.rewardPoints} pts` : `After approve: +${MVP.rewardPoints} pts`}</p>
           <div class="btn-row" style="margin-top:18px">
-            <button type="button" class="btn btn--primary" data-action="share">Share impact</button>
-            <button type="button" class="btn btn--secondary" data-action="next-task">Next task</button>
+            <button type="button" class="btn btn--primary" data-action="next-task">${locale === "ru" ? "К карте" : "Back to map"}</button>
           </div>
         </div>
       </div>
@@ -288,37 +396,34 @@ function renderVerify() {
 }
 
 function renderProfile() {
+  const locale = appLocale();
+  const name = state.profile?.display_name || (locale === "ru" ? "Гость" : "Guest");
+  const points = state.profile?.points ?? 0;
+  const cleanups = state.profile?.cleanups ?? 0;
   return `
     <section class="screen is-active" data-screen="profile">
       <div class="status-bar"><span>9:41</span><div class="status-bar__icons"><span class="status-bar__icon"></span><span class="status-bar__icon"></span><span class="status-bar__icon status-bar__icon--battery"></span></div></div>
       ${renderHeader(screens.profile)}
       <div class="screen__body">
         <div class="profile-head">
-          <div class="avatar avatar--lg" aria-hidden="true">${PROFILE.name[0]}</div>
+          <div class="avatar avatar--lg" aria-hidden="true">${name.charAt(0).toUpperCase()}</div>
           <div>
-            <h2>${PROFILE.name}</h2>
-            <p>${PROFILE.level}</p>
+            <h2>${name}</h2>
+            <p>${state.session ? (locale === "ru" ? "Участник Clean Map" : "Clean Map member") : (locale === "ru" ? "Гость" : "Guest")}</p>
           </div>
         </div>
         <div class="card" style="margin-top:24px">
           <div class="stats-grid">
-            <div><strong>${PROFILE.cleanups}</strong><span>cleanups</span></div>
-            <div><strong>${PROFILE.area}</strong><span>area covered</span></div>
-            <div><strong>${PROFILE.points.toLocaleString()}</strong><span>points</span></div>
+            <div><strong>${cleanups}</strong><span>${locale === "ru" ? "уборок" : "cleanups"}</span></div>
+            <div><strong>${MVP.pilotCityRu.slice(0, 4)}</strong><span>${locale === "ru" ? "пилот" : "pilot"}</span></div>
+            <div><strong>${points.toLocaleString()}</strong><span>points</span></div>
           </div>
         </div>
-        <div class="card">
-          <h2 class="card__title">Badges</h2>
-          <div class="badge-grid">
-            ${PROFILE.badges.map((badge, index) => `
-              <div class="badge-item">
-                <span class="badge-item__icon${index === 0 ? " is-earned" : ""}"></span>
-                <span>${badge}</span>
-              </div>
-            `).join("")}
-          </div>
-        </div>
-        <button type="button" class="btn btn--secondary btn--block" style="margin-top:16px" data-action="go-sponsor">View sponsor campaigns</button>
+        ${state.session ? `
+          <button type="button" class="btn btn--secondary btn--block" style="margin-top:16px" data-action="sign-out">${t("signOut")}</button>
+        ` : `
+          <button type="button" class="btn btn--primary btn--block" style="margin-top:16px" data-action="go-auth">${t("signIn")}</button>
+        `}
       </div>
       ${renderTabBar("Profile")}
     </section>
@@ -351,6 +456,7 @@ function renderSponsor() {
 
 const renderers = {
   onboarding: renderOnboarding,
+  auth: renderAuth,
   map: renderMap,
   report: renderReport,
   task: renderTask,
@@ -370,9 +476,15 @@ function navigate(screen, options = {}) {
   render();
 }
 
+function resolveScreen() {
+  if (!state.onboardingDone && state.screen === "onboarding") return "onboarding";
+  if (!state.onboardingDone && state.screen === "map") return "onboarding";
+  if (!state.session && ["report", "proof"].includes(state.screen)) return "auth";
+  return state.screen;
+}
+
 function render() {
-  const initial = !state.onboardingDone && state.screen === "onboarding" ? "onboarding" : state.screen;
-  if (!state.onboardingDone && state.screen === "map") state.screen = "onboarding";
+  const initial = resolveScreen();
   const figmaSrc = figmaData ? figmaScreenAsset(figmaData, initial) : null;
   document.body.classList.toggle("figma-overlay-on", state.figmaOverlay && !!figmaSrc);
   phone.innerHTML = `
@@ -400,34 +512,40 @@ function handleAction(action) {
       navigate("task");
       break;
     case "go-report":
-      navigate("report");
+      if (requireAuth("report")) navigate("report");
+      break;
+    case "go-auth":
+      state.authMode = "login";
+      navigate("auth");
+      break;
+    case "auth-toggle":
+      state.authMode = state.authMode === "register" ? "login" : "register";
+      render();
+      break;
+    case "auth-skip":
+      navigate("map");
+      break;
+    case "auth-submit":
+      handleAuthSubmit();
+      break;
+    case "sign-out":
+      handleSignOut();
       break;
     case "submit-report":
-      showToast("Report submitted · AI estimate ready");
-      if (getTasks()[0]) state.selectedTaskId = getTasks()[0].id;
-      setTimeout(() => navigate("map"), 900);
+      handleSubmitReport();
       break;
     case "accept-task":
-      if (state.acceptedTaskId !== selectedTask().id) {
+      if (!requireAuth("task")) break;
+      if (state.acceptedTaskId !== selectedTask()?.id) {
         state.acceptedTaskId = selectedTask().id;
-        showToast("Task accepted · good luck!");
+        showToast(appLocale() === "ru" ? "Задача принята" : "Task accepted · good luck!");
         render();
       } else {
         navigate("proof");
       }
       break;
     case "send-proof":
-      navigate("verify");
-      break;
-    case "share":
-      if (navigator.share) {
-        navigator.share({
-          title: "Clean Map impact",
-          text: `I just completed a cleanup and earned ${selectedTask().reward} points on Clean Map.`
-        }).catch(() => showToast("Impact ready to share"));
-      } else {
-        showToast("Impact copied to clipboard");
-      }
+      handleSendProof();
       break;
     case "next-task":
       navigate("map");
@@ -448,6 +566,85 @@ function handleAction(action) {
   }
 }
 
+async function handleAuthSubmit() {
+  const form = phone.querySelector("[data-auth-form]");
+  if (!form) return;
+  const username = form.username.value.trim();
+  const password = form.password.value;
+  try {
+    if (state.authMode === "register") {
+      await signUp(username, password);
+    } else {
+      await signIn(username, password);
+    }
+    await refreshAuth();
+    showToast(appLocale() === "ru" ? "Вы вошли" : "Signed in");
+    navigate(state.authReturn || "map");
+  } catch (err) {
+    showToast(err.message || String(err));
+  }
+}
+
+async function handleSignOut() {
+  await signOut();
+  await refreshAuth();
+  navigate("map");
+}
+
+async function handleSubmitReport() {
+  if (!requireAuth("report")) return;
+  if (!state.reportPhotoFile) {
+    showToast(t("missingPhoto"));
+    return;
+  }
+  if (!state.userLocation) {
+    state.userLocation = await requestUserLocation();
+  }
+  if (!state.userLocation) {
+    showToast(t("missingGps"));
+    return;
+  }
+  try {
+    await createReport({
+      userId: state.session.user.id,
+      category: state.reportCategory,
+      lat: state.userLocation.lat,
+      lng: state.userLocation.lng,
+      photoFile: state.reportPhotoFile,
+      locale: appLocale()
+    });
+    setPhotoFile("reportPhoto", null);
+    showToast(t("reportSent"));
+    navigate("map");
+  } catch (err) {
+    showToast(err.message || String(err));
+  }
+}
+
+async function handleSendProof() {
+  if (!requireAuth("proof")) return;
+  const task = selectedTask();
+  if (!task) return;
+  if (!state.proofBeforeFile || !state.proofAfterFile) {
+    showToast(t("missingProof"));
+    return;
+  }
+  try {
+    await createSubmission({
+      userId: state.session.user.id,
+      taskId: task.id,
+      beforeFile: state.proofBeforeFile,
+      afterFile: state.proofAfterFile
+    });
+    setPhotoFile("proofBefore", null);
+    setPhotoFile("proofAfter", null);
+    showToast(t("proofSent"));
+    navigate("verify");
+  } catch (err) {
+    showToast(err.message || String(err));
+  }
+}
+
 function handleTab(tab) {
   const routes = {
     Map: "map",
@@ -455,8 +652,22 @@ function handleTab(tab) {
     Tasks: state.acceptedTaskId ? "proof" : "task",
     Profile: "profile"
   };
-  navigate(routes[tab] || "map");
+  const target = routes[tab] || "map";
+  if ((target === "report" || target === "proof") && !requireAuth(target)) {
+    return;
+  }
+  navigate(target);
 }
+
+phone.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-photo-input]");
+  if (!input || !input.files || !input.files[0]) return;
+  const kind = input.dataset.photoInput;
+  if (kind === "report") setPhotoFile("reportPhoto", input.files[0]);
+  if (kind === "proofBefore") setPhotoFile("proofBefore", input.files[0]);
+  if (kind === "proofAfter") setPhotoFile("proofAfter", input.files[0]);
+  render();
+});
 
 phone.addEventListener("click", (event) => {
   const actionEl = event.target.closest("[data-action]");
@@ -531,6 +742,7 @@ async function init() {
   } catch (_) {
     figmaData = null;
   }
+  await refreshAuth();
   await loadTasks();
   if (state.onboardingDone) state.screen = "map";
   render();
