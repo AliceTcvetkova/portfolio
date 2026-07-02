@@ -1,4 +1,5 @@
 import { appLocale } from "./mvp-settings.js";
+import { photoPublicUrl } from "./photos.js";
 
 const SEVERITY = {
   high: { pinColor: "red", pinLabel: "High", en: "High pollution", ru: "Сильное загрязнение" },
@@ -53,7 +54,10 @@ export function normalizeTask(row, userLocation) {
     pinColor: meta.pinColor,
     pinLabel: meta.pinLabel,
     distance: formatDistance(km),
-    distanceKm: km
+    distanceKm: km,
+    beforePhotoPath: row.before_photo_path || null,
+    beforePhotoUrl: row.before_photo_path ? photoPublicUrl(row.before_photo_path) : null,
+    reporterId: row.reporter_id || null
   };
 }
 
@@ -68,7 +72,7 @@ export function sortByDistance(tasks) {
 export async function loadTasksFromSupabase(supabase, userLocation) {
   const { data, error } = await supabase
     .from("tasks")
-    .select("id, title, location_name, lat, lng, severity, reward_points, category, created_at, status")
+    .select("id, title, location_name, lat, lng, severity, reward_points, category, created_at, status, before_photo_path, reporter_id")
     .eq("status", "open")
     .order("created_at", { ascending: false });
 

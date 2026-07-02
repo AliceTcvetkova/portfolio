@@ -28,7 +28,11 @@ export const STRINGS = {
     proofSent: "Proof sent · pending review",
     missingPhoto: "Add a photo first",
     missingGps: "Allow location to submit",
-    missingProof: "Add before and after photos"
+    missingProof: "Add an after photo",
+    ownTask: "You reported this — another user should clean it",
+    noBeforePhoto: "This task has no before photo yet",
+    photoBefore: "Before photo (pollution)",
+    photoAfter: "After photo (cleaned)"
   },
   ru: {
     installBanner: "Установите Eco Clean Map на главный экран для быстрого доступа.",
@@ -46,7 +50,11 @@ export const STRINGS = {
     proofSent: "Фото отправлены · на проверке",
     missingPhoto: "Сначала добавьте фото",
     missingGps: "Разрешите геолокацию",
-    missingProof: "Добавьте фото до и после"
+    missingProof: "Добавьте фото «после»",
+    ownTask: "Вы создали это объявление — убирать должен другой пользователь",
+    noBeforePhoto: "У задачи пока нет фото «до»",
+    photoBefore: "Фото «до» (загрязнение)",
+    photoAfter: "Фото «после» (убрано)"
   }
 };
 

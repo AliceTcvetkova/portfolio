@@ -29,11 +29,27 @@ export async function createReport({ userId, category, lat, lng, photoFile, loca
     .select("id")
     .single();
   if (error) throw error;
+
+  const { error: taskError } = await supabase.from("tasks").insert({
+    title: `${category} cleanup`,
+    location_name: locationLabel(lat, lng, locale),
+    lat,
+    lng,
+    severity: "medium",
+    reward_points: MVP.rewardPoints,
+    category,
+    status: "open",
+    report_id: data.id,
+    before_photo_path: photoPath,
+    reporter_id: userId
+  });
+  if (taskError) console.warn("Task not created — run phase3b-task-reporter.sql", taskError);
+
   return data;
 }
 
-export async function createSubmission({ userId, taskId, beforeFile, afterFile }) {
-  const beforePath = await uploadPhoto(userId, "submissions/before", beforeFile);
+export async function createSubmission({ userId, taskId, beforePhotoPath, afterFile }) {
+  if (!beforePhotoPath) throw new Error("Task has no before photo");
   const afterPath = await uploadPhoto(userId, "submissions/after", afterFile);
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -41,7 +57,7 @@ export async function createSubmission({ userId, taskId, beforeFile, afterFile }
     .insert({
       user_id: userId,
       task_id: taskId,
-      before_photo_path: beforePath,
+      before_photo_path: beforePhotoPath,
       after_photo_path: afterPath,
       status: "pending"
     })
