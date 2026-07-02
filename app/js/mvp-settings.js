@@ -32,7 +32,33 @@ export const STRINGS = {
     ownTask: "You reported this — another user should clean it",
     noBeforePhoto: "This task has no before photo yet",
     photoBefore: "Before photo (pollution)",
-    photoAfter: "After photo (cleaned)"
+    photoAfter: "After photo (cleaned)",
+    tabMap: "Map",
+    tabReport: "Report",
+    tabTasks: "Tasks",
+    tabProfile: "Profile",
+    pullRefresh: "Release to refresh",
+    refreshing: "Refreshing…",
+    refreshed: "Updated",
+    activityTitle: "Your activity",
+    activityReport: "Report",
+    activityCleanup: "Cleanup",
+    activityEmpty: "No activity yet",
+    statusPending: "Pending review",
+    statusApproved: "Approved",
+    statusRejected: "Rejected",
+    taskTaken: "Someone already submitted proof for this task",
+    taskAccepted: "Task accepted · good luck!",
+    signedIn: "Signed in",
+    guest: "Guest",
+    member: "Clean Map member",
+    points: "points",
+    cleanups: "cleanups",
+    pilot: "pilot",
+    noTasks: "No tasks with photos yet",
+    nearestCleanup: "Nearest cleanup",
+    openTask: "View task",
+    reportNew: "Report new"
   },
   ru: {
     installBanner: "Установите Eco Clean Map на главный экран для быстрого доступа.",
@@ -54,7 +80,33 @@ export const STRINGS = {
     ownTask: "Вы создали это объявление — убирать должен другой пользователь",
     noBeforePhoto: "У задачи пока нет фото «до»",
     photoBefore: "Фото «до» (загрязнение)",
-    photoAfter: "Фото «после» (убрано)"
+    photoAfter: "Фото «после» (убрано)",
+    tabMap: "Карта",
+    tabReport: "Репорт",
+    tabTasks: "Задачи",
+    tabProfile: "Профиль",
+    pullRefresh: "Отпустите для обновления",
+    refreshing: "Обновление…",
+    refreshed: "Обновлено",
+    activityTitle: "Ваша активность",
+    activityReport: "Репорт",
+    activityCleanup: "Уборка",
+    activityEmpty: "Пока нет активности",
+    statusPending: "На проверке",
+    statusApproved: "Одобрено",
+    statusRejected: "Отклонено",
+    taskTaken: "Proof по этой задаче уже отправлен",
+    taskAccepted: "Задача принята · удачи!",
+    signedIn: "Вы вошли",
+    guest: "Гость",
+    member: "Участник Clean Map",
+    points: "баллов",
+    cleanups: "уборок",
+    pilot: "пилот",
+    noTasks: "Пока нет задач с фото",
+    nearestCleanup: "Ближайшая уборка",
+    openTask: "Открыть задачу",
+    reportNew: "Сообщить"
   }
 };
 
@@ -62,6 +114,16 @@ export function appLocale() {
   const saved = localStorage.getItem("cleanMapLocale");
   if (saved === "en" || saved === "ru") return saved;
   return navigator.language.toLowerCase().startsWith("ru") ? "ru" : MVP.defaultLocale;
+}
+
+export function setLocale(locale) {
+  if (locale === "en" || locale === "ru") {
+    localStorage.setItem("cleanMapLocale", locale);
+  }
+}
+
+export function toggleLocale() {
+  setLocale(appLocale() === "ru" ? "en" : "ru");
 }
 
 export function t(key) {

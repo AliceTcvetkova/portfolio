@@ -1,11 +1,12 @@
 import { FALLBACK_ROWS, CAMPAIGN, REPORT_CATEGORIES } from "./data.js";
 import { loadFigmaTokens, applyFigmaTokens, figmaScreenAsset } from "./figma.js";
-import { DEV_MODE, MVP, appLocale, t } from "./mvp-settings.js";
+import { DEV_MODE, MVP, appLocale, t, toggleLocale } from "./mvp-settings.js";
 import { getSupabase } from "./supabase-client.js";
-import { loadTasksFromSupabase, normalizeTask, requestUserLocation, sortByDistance } from "./tasks-api.js";
+import { loadTasksFromSupabase, normalizeTask, requestUserLocation, sortByDistance, filterPlayableTasks } from "./tasks-api.js";
 import { destroyMaps, mountLeafletMap } from "./leaflet-map.js";
 import { getSession, loadProfile, signIn, signUp, signOut } from "./auth.js";
 import { createReport, createSubmission } from "./reports-api.js";
+import { loadUserActivity } from "./activity-api.js";
 
 const state = {
   screen: "onboarding",
@@ -24,10 +25,20 @@ const state = {
   reportPhotoFile: null,
   reportPhotoUrl: null,
   proofAfterFile: null,
-  proofAfterUrl: null
+  proofAfterUrl: null,
+  activity: { reports: [], submissions: [] },
+  mapRefreshing: false
 };
 
 let figmaData = null;
+let pullTouch = { active: false, startY: 0 };
+
+const TAB_LABELS = {
+  Map: "tabMap",
+  Report: "tabReport",
+  Tasks: "tabTasks",
+  Profile: "tabProfile"
+};
 
 const screens = {
   onboarding: { title: "Clean Map", subtitle: "Turn polluted places into cleanup quests.", tab: "Home", hideTabs: true },
@@ -59,7 +70,7 @@ function mapSubtitle() {
   const tasks = getTasks();
   const locale = appLocale();
   if (!tasks.length) {
-    return locale === "ru" ? `Нет задач · ${MVP.pilotCityRu}` : `No tasks · ${MVP.pilotCity}`;
+    return locale === "ru" ? `${t("noTasks")} · ${MVP.pilotCityRu}` : `${t("noTasks")} · ${MVP.pilotCity}`;
   }
   const nearest = tasks[0];
   if (locale === "ru") {
@@ -150,7 +161,41 @@ function mountActiveMaps() {
   });
 }
 
+function statusLabel(status) {
+  if (status === "approved") return t("statusApproved");
+  if (status === "rejected") return t("statusRejected");
+  return t("statusPending");
+}
+
+function statusClass(status) {
+  if (status === "approved") return "activity-item__status--approved";
+  if (status === "rejected") return "activity-item__status--rejected";
+  return "activity-item__status--pending";
+}
+
+function formatActivityDate(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString(appLocale() === "ru" ? "ru-RU" : "en-GB", {
+    day: "numeric",
+    month: "short"
+  });
+}
+
+async function loadActivity() {
+  if (!state.session) {
+    state.activity = { reports: [], submissions: [] };
+    return;
+  }
+  try {
+    state.activity = await loadUserActivity(state.session.user.id);
+  } catch (_) {
+    state.activity = { reports: [], submissions: [] };
+  }
+}
+
 function renderHeader(meta) {
+  const locale = appLocale();
+  const otherLocale = locale === "ru" ? "EN" : "RU";
   return `
     <header class="header">
       <div class="header__row">
@@ -158,7 +203,10 @@ function renderHeader(meta) {
           <h1 class="header__title">${meta.title}</h1>
           <p class="header__subtitle">${meta.subtitle}</p>
         </div>
-        ${meta.tab === "Profile" || meta.tab === "Home" ? "" : `<div class="avatar" aria-hidden="true">${profileInitial()}</div>`}
+        <div class="header__actions">
+          <button type="button" class="locale-toggle" data-action="toggle-locale" aria-label="Language">${otherLocale}</button>
+          ${meta.tab === "Profile" || meta.tab === "Home" ? "" : `<div class="avatar" aria-hidden="true">${profileInitial()}</div>`}
+        </div>
       </div>
     </header>
   `;
@@ -171,7 +219,7 @@ function renderTabBar(activeTab) {
       ${tabs.map((label) => `
         <button type="button" class="tab-bar__item${activeTab === label || (activeTab === "Home" && label === "Map") || (activeTab === "Sponsor" && label === "Tasks") ? " is-active" : ""}" data-tab="${label}">
           <span class="tab-bar__icon"></span>
-          <span>${label}</span>
+          <span>${t(TAB_LABELS[label])}</span>
         </button>
       `).join("")}
     </nav>
@@ -201,11 +249,11 @@ function renderOnboarding() {
 
 function renderMap() {
   const task = selectedTask();
-  const locale = appLocale();
   return `
     <section class="screen is-active" data-screen="map">
       ${renderHeader({ ...screens.map, subtitle: mapSubtitle() })}
-      <div class="screen__body screen__body--flush">
+      <div class="screen__body screen__body--flush screen__body--scroll" data-pull-zone>
+        <p class="pull-hint" data-pull-hint>${t("pullRefresh")}</p>
         <div style="padding:0 20px">
           <div class="map-wrap">
             ${mapContainer({ tall: true, fit: true })}
@@ -214,12 +262,12 @@ function renderMap() {
         </div>
         ${task ? `
         <div class="sheet card">
-          <p class="card__label">${locale === "ru" ? "Ближайшая уборка" : "Nearest cleanup"}</p>
+          <p class="card__label">${t("nearestCleanup")}</p>
           <h2 class="card__title">${task.title}</h2>
           <p class="card__meta">${task.distance} · ${task.severity} · ${task.reward} pts</p>
           <div class="btn-row" style="margin-top:18px">
-            <button type="button" class="btn btn--primary" data-action="open-task">${locale === "ru" ? "Открыть задачу" : "View task"}</button>
-            <button type="button" class="btn btn--secondary" data-action="go-report">${locale === "ru" ? "Сообщить" : "Report new"}</button>
+            <button type="button" class="btn btn--primary" data-action="open-task">${t("openTask")}</button>
+            <button type="button" class="btn btn--secondary" data-action="go-report">${t("reportNew")}</button>
           </div>
         </div>` : ""}
       </div>
@@ -390,30 +438,61 @@ function renderVerify() {
   `;
 }
 
+function renderActivitySection() {
+  const { reports, submissions } = state.activity;
+  if (!reports.length && !submissions.length) {
+    return `<p class="activity-empty">${t("activityEmpty")}</p>`;
+  }
+  const reportItems = reports.map((item) => `
+    <li class="activity-item">
+      <div>
+        <strong>${t("activityReport")}</strong>
+        <span>${item.location_name || item.category}</span>
+      </div>
+      <span class="activity-item__status ${statusClass(item.status)}">${statusLabel(item.status)}</span>
+      <time>${formatActivityDate(item.created_at)}</time>
+    </li>
+  `).join("");
+  const subItems = submissions.map((item) => `
+    <li class="activity-item">
+      <div>
+        <strong>${t("activityCleanup")}</strong>
+        <span>${item.tasks?.title || item.tasks?.location_name || "—"}</span>
+      </div>
+      <span class="activity-item__status ${statusClass(item.status)}">${statusLabel(item.status)}</span>
+      <time>${formatActivityDate(item.created_at)}</time>
+    </li>
+  `).join("");
+  return `<ul class="activity-list">${reportItems}${subItems}</ul>`;
+}
+
 function renderProfile() {
-  const locale = appLocale();
-  const name = state.profile?.display_name || (locale === "ru" ? "Гость" : "Guest");
+  const name = state.profile?.display_name || t("guest");
   const points = state.profile?.points ?? 0;
   const cleanups = state.profile?.cleanups ?? 0;
   return `
     <section class="screen is-active" data-screen="profile">
       ${renderHeader(screens.profile)}
-      <div class="screen__body">
+      <div class="screen__body screen__body--scroll">
         <div class="profile-head">
           <div class="avatar avatar--lg" aria-hidden="true">${name.charAt(0).toUpperCase()}</div>
           <div>
             <h2>${name}</h2>
-            <p>${state.session ? (locale === "ru" ? "Участник Clean Map" : "Clean Map member") : (locale === "ru" ? "Гость" : "Guest")}</p>
+            <p>${state.session ? t("member") : t("guest")}</p>
           </div>
         </div>
         <div class="card" style="margin-top:24px">
           <div class="stats-grid">
-            <div><strong>${cleanups}</strong><span>${locale === "ru" ? "уборок" : "cleanups"}</span></div>
-            <div><strong>${MVP.pilotCityRu.slice(0, 4)}</strong><span>${locale === "ru" ? "пилот" : "pilot"}</span></div>
-            <div><strong>${points.toLocaleString()}</strong><span>points</span></div>
+            <div><strong>${cleanups}</strong><span>${t("cleanups")}</span></div>
+            <div><strong>${MVP.pilotCityRu.slice(0, 4)}</strong><span>${t("pilot")}</span></div>
+            <div><strong>${points.toLocaleString()}</strong><span>${t("points")}</span></div>
           </div>
         </div>
         ${state.session ? `
+          <div class="card" style="margin-top:16px">
+            <h2 class="card__title">${t("activityTitle")}</h2>
+            ${renderActivitySection()}
+          </div>
           <button type="button" class="btn btn--secondary btn--block" style="margin-top:16px" data-action="sign-out">${t("signOut")}</button>
         ` : `
           <button type="button" class="btn btn--primary btn--block" style="margin-top:16px" data-action="go-auth">${t("signIn")}</button>
@@ -459,13 +538,14 @@ const renderers = {
   sponsor: renderSponsor
 };
 
-function navigate(screen, options = {}) {
+async function navigate(screen, options = {}) {
   if (options.taskId) state.selectedTaskId = options.taskId;
   state.screen = screen;
   if (options.persistOnboarding && screen !== "onboarding") {
     localStorage.setItem("cleanMapOnboarded", "1");
     state.onboardingDone = true;
   }
+  if (screen === "profile") await loadActivity();
   render();
 }
 
@@ -493,7 +573,53 @@ function render() {
     ${state.figmaOverlay && figmaSrc ? `<img class="figma-ref" src="${figmaSrc}" alt="Figma reference for ${initial} screen">` : ""}
     ${renderers[initial]()}
   `;
-  requestAnimationFrame(() => mountActiveMaps());
+  requestAnimationFrame(() => {
+    mountActiveMaps();
+    setupPullRefresh();
+  });
+}
+
+async function refreshMapData() {
+  if (state.mapRefreshing) return;
+  state.mapRefreshing = true;
+  showToast(t("refreshing"));
+  await loadTasks();
+  if (state.session) await refreshAuth();
+  state.mapRefreshing = false;
+  showToast(t("refreshed"));
+  render();
+}
+
+function setupPullRefresh() {
+  const zone = phone.querySelector("[data-pull-zone]");
+  if (!zone) return;
+  if (zone.dataset.pullReady) return;
+  zone.dataset.pullReady = "1";
+  const hint = zone.querySelector("[data-pull-hint]");
+
+  zone.addEventListener("touchstart", (event) => {
+    if (zone.scrollTop > 4) return;
+    pullTouch.active = true;
+    pullTouch.startY = event.touches[0].clientY;
+  }, { passive: true });
+
+  zone.addEventListener("touchmove", (event) => {
+    if (!pullTouch.active) return;
+    const delta = event.touches[0].clientY - pullTouch.startY;
+    if (delta > 48 && zone.scrollTop <= 0) {
+      hint?.classList.add("is-visible");
+    } else {
+      hint?.classList.remove("is-visible");
+    }
+  }, { passive: true });
+
+  zone.addEventListener("touchend", () => {
+    if (!pullTouch.active) return;
+    const shouldRefresh = hint?.classList.contains("is-visible");
+    pullTouch.active = false;
+    hint?.classList.remove("is-visible");
+    if (shouldRefresh) refreshMapData();
+  });
 }
 
 function handleAction(action) {
@@ -537,7 +663,7 @@ function handleAction(action) {
         }
         if (state.acceptedTaskId !== task?.id) {
           state.acceptedTaskId = task.id;
-          showToast(appLocale() === "ru" ? "Задача принята" : "Task accepted · good luck!");
+          showToast(t("taskAccepted"));
           render();
         } else {
           navigate("proof");
@@ -555,6 +681,11 @@ function handleAction(action) {
       break;
     case "fund":
       showToast("Campaign funded · thank you!");
+      break;
+    case "toggle-locale":
+      toggleLocale();
+      setupInstallBanner();
+      render();
       break;
     case "toggle-figma":
       state.figmaOverlay = !state.figmaOverlay;
@@ -578,7 +709,7 @@ async function handleAuthSubmit() {
       await signIn(username, password);
     }
     await refreshAuth();
-    showToast(appLocale() === "ru" ? "Вы вошли" : "Signed in");
+    showToast(t("signedIn"));
     navigate(state.authReturn || "map");
   } catch (err) {
     showToast(err.message || String(err));
@@ -642,10 +773,18 @@ async function handleSendProof() {
       afterFile: state.proofAfterFile
     });
     setPhotoFile("proofAfter", null);
+    state.acceptedTaskId = null;
+    await loadTasks();
     showToast(t("proofSent"));
     navigate("verify");
   } catch (err) {
-    showToast(err.message || String(err));
+    if (err.code === "23505" || /duplicate/i.test(err.message || "")) {
+      showToast(t("taskTaken"));
+      state.acceptedTaskId = null;
+      await loadTasks();
+    } else {
+      showToast(err.message || String(err));
+    }
   }
 }
 
@@ -658,6 +797,10 @@ function handleTab(tab) {
   };
   const target = routes[tab] || "map";
   if ((target === "report" || target === "proof") && !requireAuth(target)) {
+    return;
+  }
+  if (target === "profile") {
+    refreshAuth().then(() => navigate("profile"));
     return;
   }
   navigate(target);
@@ -728,12 +871,15 @@ async function loadTasks() {
   try {
     state.tasks = await loadTasksFromSupabase(getSupabase(), state.userLocation);
   } catch (_) {
-    state.tasks = sortByDistance(
-      FALLBACK_ROWS.map((row) => normalizeTask(row, state.userLocation))
+    state.tasks = filterPlayableTasks(
+      sortByDistance(FALLBACK_ROWS.map((row) => normalizeTask(row, state.userLocation)))
     );
   }
-  if (state.tasks[0] && !state.selectedTaskId) {
-    state.selectedTaskId = state.tasks[0].id;
+  if (!state.tasks.find((task) => task.id === state.selectedTaskId)) {
+    state.selectedTaskId = state.tasks[0]?.id || null;
+  }
+  if (state.acceptedTaskId && !state.tasks.find((task) => task.id === state.acceptedTaskId)) {
+    state.acceptedTaskId = null;
   }
 }
 

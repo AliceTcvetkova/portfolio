@@ -28,11 +28,18 @@ export function formatDistance(km) {
 
 function formatReported(iso) {
   if (!iso) return "—";
+  const locale = appLocale();
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.max(1, Math.round(diff / 60000));
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 60) {
+    return locale === "ru" ? `${mins} мин назад` : `${mins} min ago`;
+  }
   const hrs = Math.round(mins / 60);
-  return `${hrs} hr ago`;
+  return locale === "ru" ? `${hrs} ч назад` : `${hrs} hr ago`;
+}
+
+export function filterPlayableTasks(tasks) {
+  return tasks.filter((task) => task.beforePhotoPath);
 }
 
 export function normalizeTask(row, userLocation) {
@@ -74,10 +81,11 @@ export async function loadTasksFromSupabase(supabase, userLocation) {
     .from("tasks")
     .select("id, title, location_name, lat, lng, severity, reward_points, category, created_at, status, before_photo_path, reporter_id")
     .eq("status", "open")
+    .not("before_photo_path", "is", null)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return sortByDistance((data || []).map((row) => normalizeTask(row, userLocation)));
+  return sortByDistance(filterPlayableTasks((data || []).map((row) => normalizeTask(row, userLocation))));
 }
 
 export function requestUserLocation() {
