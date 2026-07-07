@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Eco Clean Map">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="38%" r="58%">
+      <stop offset="0%" stop-color="#6f8f63" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#20372f" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="#20372f"/>
+  <circle cx="256" cy="220" r="170" fill="url(#glow)"/>
+  <circle cx="256" cy="228" r="132" fill="#fff7e8"/>
+  <circle cx="256" cy="228" r="118" fill="none" stroke="#e6d9bd" stroke-width="6"/>
+  <path d="M148 300c36-52 72-78 108-78s72 26 108 78" fill="#d8e6df" opacity="0.55"/>
+  <path d="M256 132c-44 0-78 34-78 78 0 58 78 136 78 136s78-78 78-136c0-44-34-78-78-78z" fill="#6fa36f"/>
+  <circle cx="256" cy="210" r="30" fill="#fff7e8"/>
+  <circle cx="256" cy="210" r="14" fill="#c96d5a"/>
+  <path d="M256 238v34" stroke="#3f6f4c" stroke-width="8" stroke-linecap="round"/>
+  <text x="256" y="404" text-anchor="middle" fill="#ffffff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="34" font-weight="600" letter-spacing="0.5">Eco Clean Map</text>
+</svg>
