@@ -3,5 +3,6 @@
  * Google Analytics → Admin → Data streams → Web → Measurement ID.
  */
 window.SITE_CONFIG = {
-  gaMeasurementId: "G-NSDS7ZM2TE"
+  gaMeasurementId: "G-NSDS7ZM2TE",
+  siteUrl: "https://alicetcvetkova.github.io/eco_clean_map/"
 };

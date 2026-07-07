@@ -3,6 +3,7 @@ window.SITE_I18N_RU_ATTRS = {
   "Alice Tsvetkova": "Alice Tsvetkova",
   "Alice Tsvetkova on LinkedIn (opens in new tab)": "Alice Tsvetkova в LinkedIn (откроется в новой вкладке)",
   "Alice Tsvetkova · Product Manager": "Alice Tsvetkova · Продакт-менеджер",
+  "Alice Tsvetkova | Product Portfolio": "Alice Tsvetkova | Product Portfolio",
   "Alpaca": "Alpaca",
   "Baby hippo": "Детёныш бегемота",
   "Beagle": "Beagle",
@@ -48,6 +49,7 @@ window.SITE_I18N_RU_ATTRS = {
   "The Bookworm — persona metaphor for deep information collectors": "Книжный червь — метафора персоны глубоких коллекционеров информации",
   "The Road of the Memory Keeper — Locus Chamber product roadmap from research to infinite archive": "Дорога хранителя памяти — дорожная карта Locus Chamber от исследования до бесконечного архива",
   "Tsvetkova Alice — Product Manager. FinTech, EdTech, digital products and worlds.": "Tsvetkova Alice — продакт-менеджер. FinTech, EdTech, цифровые продукты и миры.",
+  "Product & Delivery Manager • AI Projects • Eco Clean Map • UX • Case Studies": "Product & Delivery Manager • AI-проекты • Eco Clean Map • UX • кейсы",
   "VK · Alice Tsvetkova": "VK · Alice Tsvetkova",
   "Werewolf in the city": "Оборотень в городе"
 };
