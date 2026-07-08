@@ -122,10 +122,16 @@ function reportLocationText() {
 }
 
 async function refreshAuth() {
-  state.session = await getSession();
-  if (state.session) {
-    state.profile = await loadProfile(state.session.user.id);
-  } else {
+  try {
+    state.session = await getSession();
+    if (state.session) {
+      state.profile = await loadProfile(state.session.user.id);
+    } else {
+      state.profile = null;
+    }
+  } catch (err) {
+    console.warn("auth refresh failed", err);
+    state.session = null;
     state.profile = null;
   }
 }
@@ -598,26 +604,42 @@ function resolveScreen() {
 }
 
 function render() {
-  const initial = resolveScreen();
-  const figmaSrc = figmaData ? figmaScreenAsset(figmaData, initial) : null;
-  document.body.classList.toggle("figma-overlay-on", state.figmaOverlay && !!figmaSrc);
-  phone.innerHTML = `
-    <div class="backdrop" aria-hidden="true">
-      <div class="backdrop__wash backdrop__wash--dusk"></div>
-      <div class="backdrop__wash backdrop__wash--hill-back"></div>
-      <div class="backdrop__wash backdrop__wash--hill-front"></div>
-      <div class="backdrop__moon"></div>
-      <div class="backdrop__cloud backdrop__cloud--1"></div>
-      <div class="backdrop__cloud backdrop__cloud--2"></div>
-    </div>
-    ${DEV_MODE && figmaData ? `<button type="button" class="figma-toggle" data-action="toggle-figma" aria-pressed="${state.figmaOverlay}">${state.figmaOverlay ? "Live UI" : "Figma ref"}</button>` : ""}
-    ${state.figmaOverlay && figmaSrc ? `<img class="figma-ref" src="${figmaSrc}" alt="Figma reference for ${initial} screen">` : ""}
-    ${renderers[initial]()}
-  `;
-  requestAnimationFrame(() => {
-    mountActiveMaps();
-    setupPullRefresh();
-  });
+  try {
+    const initial = resolveScreen();
+    const renderer = renderers[initial] || renderOnboarding;
+    const figmaSrc = figmaData ? figmaScreenAsset(figmaData, initial) : null;
+    document.body.classList.toggle("figma-overlay-on", state.figmaOverlay && !!figmaSrc);
+    phone.innerHTML = `
+      <div class="backdrop" aria-hidden="true">
+        <div class="backdrop__wash backdrop__wash--dusk"></div>
+        <div class="backdrop__wash backdrop__wash--hill-back"></div>
+        <div class="backdrop__wash backdrop__wash--hill-front"></div>
+        <div class="backdrop__moon"></div>
+        <div class="backdrop__cloud backdrop__cloud--1"></div>
+        <div class="backdrop__cloud backdrop__cloud--2"></div>
+      </div>
+      ${DEV_MODE && figmaData ? `<button type="button" class="figma-toggle" data-action="toggle-figma" aria-pressed="${state.figmaOverlay}">${state.figmaOverlay ? "Live UI" : "Figma ref"}</button>` : ""}
+      ${state.figmaOverlay && figmaSrc ? `<img class="figma-ref" src="${figmaSrc}" alt="Figma reference for ${initial} screen">` : ""}
+      ${renderer()}
+    `;
+    requestAnimationFrame(() => {
+      mountActiveMaps();
+      setupPullRefresh();
+    });
+  } catch (err) {
+    console.error("render failed", err);
+    phone.innerHTML = `
+      <section class="screen is-active">
+        <div class="screen__body">
+          <div class="card">
+            <h2 class="card__title">${appLocale() === "ru" ? "Ошибка загрузки" : "Load error"}</h2>
+            <p class="card__meta">${err.message || err}</p>
+            <button type="button" class="btn btn--primary btn--block" style="margin-top:16px" onclick="location.reload()">${appLocale() === "ru" ? "Обновить" : "Reload"}</button>
+          </div>
+        </div>
+      </section>
+    `;
+  }
 }
 
 async function refreshMapData() {
@@ -952,18 +974,46 @@ async function loadTasks() {
 }
 
 async function init() {
-  setupInstallBanner();
+  if (state.onboardingDone) state.screen = "map";
+  render();
+
+  try {
+    setupInstallBanner();
+  } catch (_) {}
+
   try {
     figmaData = await loadFigmaTokens();
     applyFigmaTokens(figmaData);
   } catch (_) {
     figmaData = null;
   }
+
   await refreshAuth();
-  if (state.onboardingDone) state.screen = "map";
   render();
-  await loadTasks();
+
+  try {
+    await loadTasks();
+  } catch (_) {
+    state.tasks = filterPlayableTasks(
+      sortByDistance(FALLBACK_ROWS.map((row) => normalizeTask(row, state.userLocation)))
+    );
+  }
   render();
 }
 
-init();
+init().catch((err) => {
+  console.error("init failed", err);
+  if (phone) {
+    phone.innerHTML = `
+      <section class="screen is-active">
+        <div class="screen__body">
+          <div class="card">
+            <h2 class="card__title">Load error</h2>
+            <p class="card__meta">${err.message || err}</p>
+            <button type="button" class="btn btn--primary btn--block" style="margin-top:16px" onclick="location.reload()">Reload</button>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+});
