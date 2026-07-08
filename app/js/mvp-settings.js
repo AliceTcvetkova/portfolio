@@ -1,13 +1,13 @@
 /** MVP product settings (Phase 0 decisions). */
 export const MVP = {
-  installUrl: "https://alicetcvetkova.github.io/portfolio/app/",
+  installUrl: "https://alicetcvetkova.github.io/eco_clean_map/app/",
   pilotCity: "Moscow",
   pilotCityRu: "Москва",
   mapCenter: { lat: 55.7558, lng: 37.6173 },
   mapZoom: 12,
   rewardPoints: 240,
   auth: "email_password",
-  resetRedirectUrl: "https://alicetcvetkova.github.io/portfolio/app/reset.html",
+  resetRedirectUrl: "https://alicetcvetkova.github.io/eco_clean_map/app/reset.html",
   locales: ["en", "ru"],
   defaultLocale: "ru"
 };

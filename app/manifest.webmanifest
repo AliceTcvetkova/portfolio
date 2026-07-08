@@ -2,7 +2,7 @@
   "name": "Eco Clean Map",
   "short_name": "Clean Map",
   "description": "Turn polluted places into cleanup quests.",
-  "id": "/portfolio/app/",
+  "id": "/eco_clean_map/app/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

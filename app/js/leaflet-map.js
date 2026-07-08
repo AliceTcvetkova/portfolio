@@ -1,4 +1,4 @@
-import L from "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet-src.esm.js";
+import * as L from "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet-src.esm.js";
 import { MVP } from "./mvp-settings.js";
 
 const PIN_COLORS = {
