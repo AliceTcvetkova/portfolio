@@ -24,6 +24,7 @@ const state = {
   authReturn: "map",
   reportPhotoFile: null,
   reportPhotoUrl: null,
+  reportLocation: null,
   proofAfterFile: null,
   proofAfterUrl: null,
   activity: { reports: [], submissions: [] },
@@ -115,10 +116,15 @@ function setPhotoFile(kind, file) {
 
 function reportLocationText() {
   const locale = appLocale();
-  if (!state.userLocation) return t("waitingGps");
-  const { lat, lng } = state.userLocation;
+  const location = getReportLocation();
+  if (!location) return t("chooseReportLocation");
+  const { lat, lng } = location;
   if (locale === "ru") return `${MVP.pilotCityRu} · ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
   return `${MVP.pilotCity} · ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+
+function getReportLocation() {
+  return state.reportLocation || state.userLocation;
 }
 
 async function refreshAuth() {
@@ -148,8 +154,9 @@ function heroMapMarkup() {
 
 function mapContainer(options = {}) {
   const tall = options.tall ? " leaflet-map--tall" : "";
+  const report = options.report ? " leaflet-map--report" : "";
   const fit = options.fit ? "1" : "0";
-  return `<div class="leaflet-map${tall}" data-leaflet-map data-map-fit="${fit}"></div>`;
+  return `<div class="leaflet-map${tall}${report}" data-leaflet-map data-map-fit="${fit}"></div>`;
 }
 
 function mountActiveMaps() {
@@ -158,12 +165,20 @@ function mountActiveMaps() {
   if (!mapEl) return;
 
   const task = selectedTask();
+  const isReportMap = state.screen === "report";
   mountLeafletMap(mapEl, {
-    tasks: getTasks(),
+    tasks: isReportMap ? [] : getTasks(),
     userLocation: state.userLocation,
+    selectedLocation: isReportMap ? getReportLocation() : null,
+    pickable: isReportMap,
     fitTasks: mapEl.dataset.mapFit === "1",
     zoom: state.screen === "task" && task ? 15 : MVP.mapZoom,
-    onTaskSelect: (taskId) => navigate("task", { taskId })
+    onTaskSelect: (taskId) => navigate("task", { taskId }),
+    onLocationPick: (location) => {
+      state.reportLocation = location;
+      showToast(t("locationSelected"));
+      render();
+    }
   });
 }
 
@@ -377,7 +392,12 @@ function renderReport() {
                <span class="camera-preview__shutter"></span>`}
         </label>
         <div class="card" style="margin-top:16px">
-          <p class="card__label" style="color:var(--green-dark)">${locale === "ru" ? "Локация" : "Location detected"}</p>
+          <p class="card__label" style="color:var(--green-dark)">${t("reportMapLabel")}</p>
+          <p class="card__meta" style="margin-top:8px">${t("reportMapHint")}</p>
+          <div class="report-map-wrap" style="margin-top:14px">
+            ${mapContainer({ report: true })}
+          </div>
+          <button type="button" class="btn btn--secondary btn--block" style="margin-top:12px" data-action="use-current-location">${t("useCurrentLocation")}</button>
           <h2 class="card__title">${reportLocationText()}</h2>
           <p class="card__label" style="margin-top:18px">${locale === "ru" ? "Категория" : "Pollution category"}</p>
           <div class="chip-row">
@@ -733,6 +753,9 @@ function handleAction(action) {
     case "submit-report":
       handleSubmitReport();
       break;
+    case "use-current-location":
+      useCurrentLocationForReport();
+      break;
     case "accept-task":
       if (!requireAuth("task")) break;
       {
@@ -824,29 +847,43 @@ async function handleSubmitReport() {
     showToast(t("missingPhoto"));
     return;
   }
-  if (!state.userLocation) {
+  if (!getReportLocation()) {
     state.userLocation = await requestUserLocation();
+    if (state.userLocation) state.reportLocation = state.userLocation;
   }
-  if (!state.userLocation) {
-    showToast(t("missingGps"));
+  const reportLocation = getReportLocation();
+  if (!reportLocation) {
+    showToast(t("missingLocation"));
     return;
   }
   try {
     await createReport({
       userId: state.session.user.id,
       category: state.reportCategory,
-      lat: state.userLocation.lat,
-      lng: state.userLocation.lng,
+      lat: reportLocation.lat,
+      lng: reportLocation.lng,
       photoFile: state.reportPhotoFile,
       locale: appLocale()
     });
     setPhotoFile("reportPhoto", null);
+    state.reportLocation = null;
     await loadTasks();
     showToast(t("reportSent"));
     navigate("map");
   } catch (err) {
     showToast(err.message || String(err));
   }
+}
+
+async function useCurrentLocationForReport() {
+  state.userLocation = await requestUserLocation();
+  if (!state.userLocation) {
+    showToast(t("missingGps"));
+    return;
+  }
+  state.reportLocation = state.userLocation;
+  showToast(t("locationSelected"));
+  render();
 }
 
 async function handleSendProof() {

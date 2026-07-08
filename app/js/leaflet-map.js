@@ -33,10 +33,19 @@ function userIcon() {
   });
 }
 
+function reportIcon() {
+  return L.divIcon({
+    className: "leaflet-report-icon",
+    html: `<span class="leaflet-report-icon__pin"></span>`,
+    iconSize: [30, 38],
+    iconAnchor: [15, 36]
+  });
+}
+
 export function mountLeafletMap(container, options) {
   if (!container) return null;
 
-  const center = options.userLocation || MVP.mapCenter;
+  const center = options.selectedLocation || options.userLocation || MVP.mapCenter;
   const map = L.map(container, {
     zoomControl: false,
     attributionControl: true
@@ -60,6 +69,20 @@ export function mountLeafletMap(container, options) {
     L.marker([options.userLocation.lat, options.userLocation.lng], { icon: userIcon() })
       .addTo(map)
       .bindTooltip("You", { permanent: false, direction: "top" });
+  }
+
+  if (options.selectedLocation) {
+    L.marker([options.selectedLocation.lat, options.selectedLocation.lng], { icon: reportIcon() })
+      .addTo(map);
+  }
+
+  if (options.pickable && typeof options.onLocationPick === "function") {
+    map.on("click", (event) => {
+      options.onLocationPick({
+        lat: event.latlng.lat,
+        lng: event.latlng.lng
+      });
+    });
   }
 
   if (options.fitTasks && options.tasks && options.tasks.length) {
