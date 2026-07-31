@@ -2,6 +2,15 @@
   "use strict";
 
   const cfg = window.RESUME_AGENT_CONFIG || { demoMode: true };
+
+  function isLiveMode() {
+    return (
+      cfg.demoMode !== true &&
+      cfg.supabaseUrl &&
+      cfg.supabaseAnonKey &&
+      !String(cfg.supabaseAnonKey).includes("PASTE")
+    );
+  }
   const form = document.getElementById("resume-agent-form");
   const vacancyInput = document.getElementById("vacancy-input");
   const analyzeBtn = document.getElementById("analyze-btn");
@@ -86,7 +95,7 @@
     const key = cfg.supabaseAnonKey;
     const fn = cfg.functionName || "resume-match";
 
-    if (!url || !key || key.includes("PASTE") || cfg.demoMode) {
+    if (!isLiveMode()) {
       return demoResponse(action, vacancy);
     }
 
@@ -187,7 +196,9 @@
     URL.revokeObjectURL(a.href);
   });
 
-  if (cfg.demoMode) {
-    setStatus("Demo mode — connect Supabase for live analysis.", "");
+  if (isLiveMode()) {
+    setStatus("Live mode — powered by Gemini.", "ok");
+  } else {
+    setStatus("Demo mode — add Supabase anon key + GEMINI_API_KEY secret to go live.", "");
   }
 })();
