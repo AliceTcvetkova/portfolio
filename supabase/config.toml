@@ -1,0 +1,4 @@
+name = "resume-match"
+verify_jwt = false
+
+[functions.resume-match]

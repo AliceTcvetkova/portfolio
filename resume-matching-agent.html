@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <title>AI Resume Matching Agent · Alice Tsvetkova</title>
+  <meta name="description" content="AI-powered vacancy matching and CV adaptation — LLM + Supabase + prompt engineering product demo.">
+  <script src="js/site-config.js"></script>
+  <script src="js/site-analytics.js"></script>
+  <script src="js/resume-agent-config.example.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/resume-matching-agent.css">
+</head>
+<body data-sketches="resume-agent">
+
+  <header class="site-header">
+    <a class="site-header__logo" href="index.html">Alice Tsvetkova</a>
+    <nav class="site-header__nav">
+      <a href="index.html#cases">Selected Product Cases</a>
+      <a href="index.html#ideas">Personal Product Vision</a>
+      <a href="index.html#about">About me</a>
+      <a class="site-header__nav--resume" href="assets/resume/Tsvetkova-Product.pdf" target="_blank" rel="noopener noreferrer" download="Tsvetkova-Alice-Product-Manager-Resume.pdf">Resume (PDF)</a>
+    </nav>
+  </header>
+
+  <main class="case-detail resume-agent">
+    <a class="case-detail__back" href="index.html#ideas">← Back to personal product vision</a>
+    <p class="case-detail__label">Personal Product Vision · AI product + automation</p>
+    <h1>AI Resume Matching Agent</h1>
+    <p>A multi-agent pipeline that reads a vacancy, matches it to my experience, and produces a tailored CV — built as a portfolio product demo.</p>
+
+    <section class="resume-agent__meta">
+      <dl class="resume-agent__grid">
+        <div>
+          <dt>User</dt>
+          <dd>Recruiter / Hiring Manager</dd>
+        </div>
+        <div>
+          <dt>Problem</dt>
+          <dd>Finding relevant experience quickly</dd>
+        </div>
+        <div>
+          <dt>Solution</dt>
+          <dd>AI-powered matching and CV adaptation</dd>
+        </div>
+        <div>
+          <dt>Tech</dt>
+          <dd>LLM + Supabase + Prompt Engineering</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section>
+      <h2>How it works</h2>
+      <p>Six specialized agents run in sequence — parser, matcher, CV tailor, recruiter validator, cover letter writer (internal), and QA scorer. The public demo exposes <strong>match analysis</strong> and <strong>CV generation</strong> only.</p>
+      <ol class="resume-agent__pipeline">
+        <li>Parse vacancy → must-have, keywords</li>
+        <li>Match against Ozon, VK, IRPO, Erich Krause + case studies</li>
+        <li>Tailor CV bullets to vacancy language</li>
+        <li>Validate ATS + recruiter rules</li>
+      </ol>
+    </section>
+
+    <section class="resume-agent__tool" aria-labelledby="tool-title">
+      <h2 id="tool-title">Try it</h2>
+      <p>Paste a job URL or full vacancy text. The agent compares it to my structured experience base.</p>
+
+      <form class="resume-agent__form" id="resume-agent-form">
+        <label class="resume-agent__label" for="vacancy-input">New vacancy</label>
+        <textarea
+          id="vacancy-input"
+          class="resume-agent__textarea"
+          name="vacancy"
+          rows="8"
+          placeholder="Paste vacancy URL or full job description text…"
+          required></textarea>
+
+        <div class="resume-agent__options">
+          <label class="resume-agent__radio">
+            <input type="radio" name="variant" value="international" checked>
+            CV — English
+          </label>
+          <label class="resume-agent__radio">
+            <input type="radio" name="variant" value="russia">
+            CV — Russian
+          </label>
+        </div>
+
+        <div class="resume-agent__actions">
+          <button type="submit" class="btn btn--primary" id="analyze-btn">Analyze match</button>
+          <button type="button" class="btn" id="get-cv-btn" disabled>Get a CV</button>
+        </div>
+        <p class="resume-agent__status" id="agent-status" role="status" aria-live="polite"></p>
+      </form>
+
+      <div class="resume-agent__results" id="results-panel" hidden>
+        <div class="resume-agent__match">
+          <span class="resume-agent__match-label">Match</span>
+          <span class="resume-agent__match-value" id="match-percent">—</span>
+        </div>
+
+        <div class="resume-agent__block">
+          <h3>Highlights</h3>
+          <ul id="highlights-list"></ul>
+        </div>
+
+        <div class="resume-agent__block resume-agent__block--concerns">
+          <h3>Expected concerns</h3>
+          <ul id="concerns-list"></ul>
+        </div>
+      </div>
+
+      <div class="resume-agent__cv" id="cv-panel" hidden>
+        <div class="resume-agent__cv-header">
+          <h3>Tailored CV</h3>
+          <button type="button" class="btn btn--small" id="download-cv-btn">Download .md</button>
+        </div>
+        <pre class="resume-agent__cv-body" id="cv-output"></pre>
+        <p class="resume-agent__cv-notes" id="cv-notes"></p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Architecture</h2>
+      <p>Knowledge base (Markdown) → export to JSON → Supabase Edge Function → OpenAI. Frontend calls the function; cover letter agent runs only in the private pipeline.</p>
+      <p><a href="https://github.com/alicetcvetkova/portfolio/blob/main/docs/resume-agent-setup.md">Setup guide →</a></p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>© Alice Tsvetkova · Product Manager</p>
+  </footer>
+
+  <script src="js/i18n/dict-ru.js"></script>
+  <script src="js/i18n/dict-ru-attrs.js"></script>
+  <script src="js/site-i18n.js"></script>
+  <script src="js/sketch-bg.js"></script>
+  <script src="js/resume-matching-agent.js"></script>
+</body>
+</html>

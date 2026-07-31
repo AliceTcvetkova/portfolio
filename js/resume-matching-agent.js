@@ -1,0 +1,193 @@
+(function () {
+  "use strict";
+
+  const cfg = window.RESUME_AGENT_CONFIG || { demoMode: true };
+  const form = document.getElementById("resume-agent-form");
+  const vacancyInput = document.getElementById("vacancy-input");
+  const analyzeBtn = document.getElementById("analyze-btn");
+  const getCvBtn = document.getElementById("get-cv-btn");
+  const statusEl = document.getElementById("agent-status");
+  const resultsPanel = document.getElementById("results-panel");
+  const cvPanel = document.getElementById("cv-panel");
+  const matchPercentEl = document.getElementById("match-percent");
+  const highlightsList = document.getElementById("highlights-list");
+  const concernsList = document.getElementById("concerns-list");
+  const cvOutput = document.getElementById("cv-output");
+  const cvNotes = document.getElementById("cv-notes");
+  const downloadCvBtn = document.getElementById("download-cv-btn");
+
+  let lastVacancy = "";
+  let lastAnalyze = null;
+
+  function setStatus(msg, type) {
+    statusEl.textContent = msg || "";
+    statusEl.className = "resume-agent__status" + (type ? " resume-agent__status--" + type : "");
+  }
+
+  function setLoading(loading) {
+    form.classList.toggle("is-loading", loading);
+    analyzeBtn.disabled = loading;
+    getCvBtn.disabled = loading || !lastAnalyze;
+  }
+
+  function getVariant() {
+    const checked = form.querySelector('input[name="variant"]:checked');
+    return checked ? checked.value : "international";
+  }
+
+  function renderList(ul, items) {
+    ul.innerHTML = "";
+    (items || []).forEach(function (text) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      ul.appendChild(li);
+    });
+    if (!items || !items.length) {
+      const li = document.createElement("li");
+      li.textContent = "—";
+      ul.appendChild(li);
+    }
+  }
+
+  function showAnalyzeResult(data) {
+    lastAnalyze = data;
+    matchPercentEl.textContent = (data.match_percent != null ? data.match_percent : "—") + "%";
+    renderList(highlightsList, data.highlights);
+    renderList(concernsList, data.expected_concerns);
+    resultsPanel.hidden = false;
+    getCvBtn.disabled = false;
+  }
+
+  async function fetchVacancyText(input) {
+    const trimmed = input.trim();
+    if (/^https?:\/\//i.test(trimmed) && trimmed.length < 500 && !trimmed.includes("\n")) {
+      setStatus("Fetching vacancy page…");
+      try {
+        const proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(trimmed);
+        const res = await fetch(proxy);
+        if (!res.ok) throw new Error("Fetch failed");
+        const html = await res.text();
+        return html.replace(/<script[\s\S]*?<\/script>/gi, " ")
+          .replace(/<style[\s\S]*?<\/style>/gi, " ")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 12000);
+      } catch (_e) {
+        setStatus("Could not fetch URL — paste full vacancy text instead.", "error");
+        throw new Error("URL fetch failed");
+      }
+    }
+    return trimmed;
+  }
+
+  async function callAgent(action, vacancy, variant) {
+    const url = cfg.supabaseUrl;
+    const key = cfg.supabaseAnonKey;
+    const fn = cfg.functionName || "resume-match";
+
+    if (!url || !key || key.includes("PASTE") || cfg.demoMode) {
+      return demoResponse(action, vacancy);
+    }
+
+    const endpoint = url.replace(/\/$/, "") + "/functions/v1/" + fn;
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + key,
+        apikey: key
+      },
+      body: JSON.stringify({ action, vacancy, variant })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Request failed");
+    return data;
+  }
+
+  function demoResponse(action, vacancy) {
+    const lower = vacancy.toLowerCase();
+    const gaming = /game|gaming|ea |unity|unreal/.test(lower);
+    const highlights = [
+      "Cross-functional delivery with 20+ teams (Ozon Bank)",
+      "100+ user interviews & platform launch (IRPO)",
+      "Process audit with ~20M RUB potential savings (VK)"
+    ];
+    if (/stakeholder|cross-functional/.test(lower)) {
+      highlights.unshift("Stakeholder alignment across business, analytics, dev, ops");
+    }
+    const concerns = [];
+    if (gaming) concerns.push("No direct gaming industry experience");
+    if (/retail|e-commerce/.test(lower)) concerns.push("Limited recent e-commerce PM depth — Ozon was fintech internal");
+    if (!concerns.length) concerns.push("Verify domain-specific requirements against case studies");
+
+    if (action === "analyze") {
+      return {
+        match_percent: gaming ? 72 : 78,
+        highlights: highlights,
+        expected_concerns: concerns
+      };
+    }
+
+    return {
+      match_percent: gaming ? 72 : 78,
+      cv_markdown: "# Alice Tsvetkova\nProduct & Delivery Manager\n\n(Demo mode — deploy Supabase function for live CV.\nSee docs/resume-agent-setup.md)\n\n## Experience\n- Ozon Bank · Oct 2024 – Apr 2026\n- IRPO · Apr 2022 – Jun 2024\n…",
+      ats_score: 80,
+      notes: "Demo output. Configure resume-agent-config.js + deploy edge function for tailored CV."
+    };
+  }
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    setLoading(true);
+    cvPanel.hidden = true;
+    setStatus("Analyzing…");
+
+    try {
+      lastVacancy = await fetchVacancyText(vacancyInput.value);
+      const data = await callAgent("analyze", lastVacancy, getVariant());
+      showAnalyzeResult(data);
+      setStatus("Analysis complete.", "ok");
+    } catch (err) {
+      setStatus(err.message || "Analysis failed", "error");
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  getCvBtn.addEventListener("click", async function () {
+    if (!lastVacancy) return;
+    setLoading(true);
+    setStatus("Generating tailored CV…");
+
+    try {
+      const data = await callAgent("get_cv", lastVacancy, getVariant());
+      cvOutput.textContent = data.cv_markdown || "";
+      cvNotes.textContent = data.notes
+        ? "ATS score: " + (data.ats_score || "—") + " · " + data.notes
+        : "";
+      cvPanel.hidden = false;
+      setStatus("CV ready.", "ok");
+    } catch (err) {
+      setStatus(err.message || "CV generation failed", "error");
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  downloadCvBtn.addEventListener("click", function () {
+    const text = cvOutput.textContent;
+    if (!text) return;
+    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "Tsvetkova-tailored-cv.md";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  if (cfg.demoMode) {
+    setStatus("Demo mode — connect Supabase for live analysis.", "");
+  }
+})();
