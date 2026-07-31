@@ -1,7 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const GEMINI_MODEL =
+  Deno.env.get("GEMINI_MODEL") ?? "gemini-2.0-flash-lite";
 const KNOWLEDGE_URL =
   Deno.env.get("RESUME_KNOWLEDGE_URL") ??
   "https://alicetcvetkova.github.io/portfolio/data/resume-knowledge.json";
@@ -29,36 +31,36 @@ async function loadKnowledge(): Promise<Knowledge> {
   return data;
 }
 
-async function chat(
-  system: string,
-  user: string,
-  model = "gpt-4o-mini",
-): Promise<string> {
-  if (!OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY not configured on Supabase");
+async function chat(system: string, user: string): Promise<string> {
+  if (!GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY not configured on Supabase (see docs/resume-agent-setup.md)");
   }
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+  const res = await fetch(url, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-      response_format: { type: "json_object" },
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [{ role: "user", parts: [{ text: user }] }],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: "application/json",
+      },
     }),
   });
+
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI error: ${res.status} ${err}`);
+    if (res.status === 429) {
+      throw new Error("Gemini free quota exceeded — try again in a minute");
+    }
+    throw new Error(`Gemini error: ${res.status} ${err}`);
   }
+
   const json = await res.json();
-  return json.choices?.[0]?.message?.content ?? "";
+  return json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 }
 
 function parseJson<T>(raw: string): T {
@@ -66,21 +68,14 @@ function parseJson<T>(raw: string): T {
   return JSON.parse(trimmed) as T;
 }
 
-const PARSE_SYSTEM = `You extract structured job vacancy data. Return JSON only:
+/** One LLM call for analyze — saves free-tier quota */
+const ANALYZE_SYSTEM = `You analyze a job vacancy and match it to a candidate using ONLY the provided knowledge base.
+Never invent experience. case_study projects (locus_chamber, eco_clean_map) are educational — skills demo only, not employment years.
+Return JSON only:
 {
   "title": string,
   "company": string,
   "language": "ru" | "en",
-  "must_have": [{"skill": string, "evidence": string}],
-  "nice_to_have": [{"skill": string}],
-  "keywords": string[],
-  "what_matters": string[]
-}`;
-
-const MATCH_SYSTEM = `You match a candidate to a vacancy using ONLY the provided knowledge base.
-Never invent experience. case_study projects (locus_chamber, eco_clean_map) are educational — usable for skills demo, not as employment years.
-Return JSON:
-{
   "match_percent": number,
   "highlights": string[],
   "expected_concerns": string[],
@@ -88,8 +83,8 @@ Return JSON:
   "matched_projects": string[]
 }`;
 
-const CV_SYSTEM = `You tailor a CV markdown for the vacancy using ONLY facts from the knowledge base.
-ATS-safe single-column markdown. No invented metrics. Return JSON:
+const CV_SYSTEM = `You tailor a CV in markdown for the vacancy using ONLY facts from the knowledge base.
+ATS-safe single-column markdown. No invented metrics. Return JSON only:
 {
   "cv_markdown": string,
   "ats_score": number,
@@ -116,31 +111,30 @@ Deno.serve(async (req) => {
 
     const knowledge = await loadKnowledge();
     const projectsText = knowledge.projects.map((p) => p.content).join("\n\n---\n\n");
-
-    const vacancyJson = parseJson<Record<string, unknown>>(
-      await chat(PARSE_SYSTEM, vacancy.slice(0, 12000)),
-    );
-
-    const matchJson = parseJson<{
-      match_percent: number;
-      highlights: string[];
-      expected_concerns: string[];
-      cv_sections_to_boost?: string[];
-    }>(
-      await chat(
-        MATCH_SYSTEM,
-        `## Vacancy\n${JSON.stringify(vacancyJson)}\n\n## Profile\n${knowledge.profile.slice(0, 6000)}\n\n## Projects\n${projectsText.slice(0, 12000)}`,
-      ),
-    );
+    const vacancySlice = vacancy.slice(0, 10000);
 
     if (action === "analyze") {
+      const result = parseJson<{
+        match_percent: number;
+        highlights: string[];
+        expected_concerns: string[];
+        cv_sections_to_boost?: string[];
+        title?: string;
+        company?: string;
+      }>(
+        await chat(
+          ANALYZE_SYSTEM,
+          `## Vacancy\n${vacancySlice}\n\n## Profile\n${knowledge.profile.slice(0, 5000)}\n\n## Projects\n${projectsText.slice(0, 10000)}`,
+        ),
+      );
+
       return json({
-        match_percent: matchJson.match_percent,
-        highlights: matchJson.highlights,
-        expected_concerns: matchJson.expected_concerns,
-        cv_sections_to_boost: matchJson.cv_sections_to_boost ?? [],
-        vacancy_title: vacancyJson.title,
-        vacancy_company: vacancyJson.company,
+        match_percent: result.match_percent,
+        highlights: result.highlights,
+        expected_concerns: result.expected_concerns,
+        cv_sections_to_boost: result.cv_sections_to_boost ?? [],
+        vacancy_title: result.title,
+        vacancy_company: result.company,
       });
     }
 
@@ -148,13 +142,11 @@ Deno.serve(async (req) => {
     const cvResult = parseJson<{ cv_markdown: string; ats_score: number; notes: string }>(
       await chat(
         CV_SYSTEM,
-        `## Vacancy\n${JSON.stringify(vacancyJson)}\n\n## Match\n${JSON.stringify(matchJson)}\n\n## Base CV\n${baseCv}\n\n## ATS rules (summary)\n${knowledge.ats_rules.slice(0, 3000)}`,
-        "gpt-4o",
+        `## Vacancy\n${vacancySlice}\n\n## Base CV\n${baseCv}\n\n## Profile\n${knowledge.profile.slice(0, 4000)}\n\n## Projects\n${projectsText.slice(0, 8000)}\n\n## ATS rules\n${knowledge.ats_rules.slice(0, 2000)}`,
       ),
     );
 
     return json({
-      match_percent: matchJson.match_percent,
       cv_markdown: cvResult.cv_markdown,
       ats_score: cvResult.ats_score,
       notes: cvResult.notes,
