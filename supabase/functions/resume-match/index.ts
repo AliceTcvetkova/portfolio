@@ -2,8 +2,12 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+const LLM_PROVIDER = Deno.env.get("LLM_PROVIDER") ?? (GEMINI_API_KEY ? "gemini" : "groq");
 const GEMINI_MODEL =
   Deno.env.get("GEMINI_MODEL") ?? "gemini-2.0-flash-lite";
+const GROQ_MODEL =
+  Deno.env.get("GROQ_MODEL") ?? "llama-3.1-8b-instant";
 const KNOWLEDGE_URL =
   Deno.env.get("RESUME_KNOWLEDGE_URL") ??
   "https://alicetcvetkova.github.io/portfolio/data/resume-knowledge.json";
@@ -31,9 +35,9 @@ async function loadKnowledge(): Promise<Knowledge> {
   return data;
 }
 
-async function chat(system: string, user: string): Promise<string> {
+async function chatGemini(system: string, user: string): Promise<string> {
   if (!GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY not configured on Supabase (see docs/resume-agent-setup.md)");
+    throw new Error("GEMINI_API_KEY not set");
   }
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
@@ -61,6 +65,51 @@ async function chat(system: string, user: string): Promise<string> {
 
   const json = await res.json();
   return json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+}
+
+async function chatGroq(system: string, user: string): Promise<string> {
+  if (!GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY not set");
+  }
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Groq error: ${res.status} ${err}`);
+  }
+
+  const json = await res.json();
+  return json.choices?.[0]?.message?.content ?? "";
+}
+
+async function chat(system: string, user: string): Promise<string> {
+  if (LLM_PROVIDER === "groq") {
+    return chatGroq(system, user);
+  }
+  if (GEMINI_API_KEY) {
+    return chatGemini(system, user);
+  }
+  if (GROQ_API_KEY) {
+    return chatGroq(system, user);
+  }
+  throw new Error(
+    "No LLM key configured. Set GROQ_API_KEY (recommended for RU) or GEMINI_API_KEY in Supabase Secrets.",
+  );
 }
 
 function parseJson<T>(raw: string): T {

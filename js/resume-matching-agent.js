@@ -197,7 +197,7 @@
   });
 
   if (isLiveMode()) {
-    setStatus("Live mode — powered by Gemini.", "ok");
+    setStatus("Live mode — LLM backend connected.", "ok");
   } else {
     setStatus("Demo mode — add Supabase anon key + GEMINI_API_KEY secret to go live.", "");
   }
