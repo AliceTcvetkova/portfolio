@@ -333,6 +333,39 @@
   margin-bottom: 0.25rem;
 }
 
+/* Off-screen root for PDF capture (avoids scroll clipping in preview) */
+.cv-pdf-export-root {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 794px;
+  overflow: visible;
+  background: #ffffff;
+  z-index: -1;
+}
+
+.cv-pdf-export-root .cv-document {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  box-shadow: none;
+  color: #1a1a1a;
+  background: #ffffff;
+}
+
+.cv-pdf-export-root .cv-document__headline {
+  color: #333333;
+}
+
+.cv-pdf-export-root .cv-document__contact,
+.cv-pdf-export-root .cv-document__job-dates {
+  color: #555555;
+}
+
+.cv-pdf-export-root .cv-document__links a {
+  color: #1a56db;
+}
+
 .resume-agent__cv-notes {
   margin: 0.75rem 0 0;
   font-size: 0.8125rem;
