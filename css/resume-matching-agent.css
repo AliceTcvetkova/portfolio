@@ -151,6 +151,42 @@
   line-height: 1;
 }
 
+.resume-agent__match-value.is-poor {
+  color: #f87171;
+}
+
+.resume-agent__fit {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.resume-agent__fit--strong_fit {
+  color: #86efac;
+  background: rgba(134, 239, 172, 0.1);
+}
+
+.resume-agent__fit--conditional_fit {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.resume-agent__fit--poor_fit {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.resume-agent__block--blockers li {
+  color: #f87171;
+}
+
+.resume-agent__block--lang li {
+  color: #fb923c;
+}
+
 .resume-agent__block h3 {
   font-size: 0.9375rem;
   font-weight: 600;

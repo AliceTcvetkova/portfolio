@@ -60,32 +60,49 @@
 
   function showAnalyzeResult(data) {
     lastAnalyze = data;
-    matchPercentEl.textContent = (data.match_percent != null ? data.match_percent : "—") + "%";
+    const pct = data.match_percent != null ? data.match_percent : "—";
+    matchPercentEl.textContent = pct + "%";
+    matchPercentEl.classList.toggle("is-poor", pct !== "—" && Number(pct) < 40);
+
+    const fitEl = document.getElementById("fit-verdict");
+    if (fitEl && data.fit_verdict) {
+      const labels = {
+        strong_fit: "Strong fit",
+        conditional_fit: "Conditional fit",
+        poor_fit: "Poor fit"
+      };
+      fitEl.textContent = labels[data.fit_verdict] || data.fit_verdict;
+      fitEl.hidden = false;
+      fitEl.className = "resume-agent__fit resume-agent__fit--" + data.fit_verdict;
+    } else if (fitEl) {
+      fitEl.hidden = true;
+    }
+
     renderList(highlightsList, data.highlights);
     renderList(concernsList, data.expected_concerns);
+
+    const blockersPanel = document.getElementById("blockers-panel");
+    const blockersList = document.getElementById("blockers-list");
+    const langPanel = document.getElementById("lang-gaps-panel");
+    const langList = document.getElementById("lang-gaps-list");
+    if (blockersList && blockersPanel) {
+      renderList(blockersList, data.hard_blockers);
+      blockersPanel.hidden = !data.hard_blockers || !data.hard_blockers.length;
+    }
+    if (langList && langPanel) {
+      renderList(langList, data.language_gaps);
+      langPanel.hidden = !data.language_gaps || !data.language_gaps.length;
+    }
+
     resultsPanel.hidden = false;
-    getCvBtn.disabled = false;
+    getCvBtn.disabled = data.fit_verdict === "poor_fit" || Number(pct) < 25;
   }
 
   async function fetchVacancyText(input) {
     const trimmed = input.trim();
-    if (/^https?:\/\//i.test(trimmed) && trimmed.length < 500 && !trimmed.includes("\n")) {
-      setStatus("Fetching vacancy page…");
-      try {
-        const proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(trimmed);
-        const res = await fetch(proxy);
-        if (!res.ok) throw new Error("Fetch failed");
-        const html = await res.text();
-        return html.replace(/<script[\s\S]*?<\/script>/gi, " ")
-          .replace(/<style[\s\S]*?<\/style>/gi, " ")
-          .replace(/<[^>]+>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 12000);
-      } catch (_e) {
-        setStatus("Could not fetch URL — paste full vacancy text instead.", "error");
-        throw new Error("URL fetch failed");
-      }
+    if (/^https?:\/\//i.test(trimmed) && trimmed.length < 2000 && !trimmed.includes("\n")) {
+      setStatus("Fetching vacancy via server…");
+      return trimmed;
     }
     return trimmed;
   }
@@ -128,6 +145,19 @@
     }
     const concerns = [];
     if (gaming) concerns.push("No direct gaming industry experience");
+    if (/chinese|mandarin|китайск/i.test(lower)) {
+      concerns.push("Chinese required — not in language profile (EN C1, DE/FR B1 only)");
+      if (action === "analyze") {
+        return {
+          match_percent: 28,
+          fit_verdict: "poor_fit",
+          highlights: highlights.slice(0, 2),
+          expected_concerns: concerns,
+          language_gaps: ["Chinese (Mandarin) required — candidate does not speak Chinese"],
+          hard_blockers: ["Chinese language required — not available"]
+        };
+      }
+    }
     if (/retail|e-commerce/.test(lower)) concerns.push("Limited recent e-commerce PM depth — Ozon was fintech internal");
     if (!concerns.length) concerns.push("Verify domain-specific requirements against case studies");
 
@@ -157,7 +187,8 @@
       lastVacancy = await fetchVacancyText(vacancyInput.value);
       const data = await callAgent("analyze", lastVacancy, getVariant());
       showAnalyzeResult(data);
-      setStatus("Analysis complete.", "ok");
+      const fetched = data.fetched_from_url ? " (loaded from URL)" : "";
+      setStatus("Analysis complete." + fetched, "ok");
     } catch (err) {
       setStatus(err.message || "Analysis failed", "error");
     } finally {

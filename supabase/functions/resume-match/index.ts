@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { applyLanguageAdjustments, type AnalyzeResult } from "../_shared/language-match.ts";
+import { isVacancyUrl, resolveVacancyInput } from "../_shared/fetch-vacancy.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
@@ -18,6 +20,9 @@ type Knowledge = {
   cv_en: string;
   ats_rules: string;
   recruiter_rules: string;
+  portfolio_sync?: string;
+  market_positioning?: string;
+  languages?: string;
   projects: { id: string; content: string }[];
 };
 
@@ -118,22 +123,39 @@ function parseJson<T>(raw: string): T {
 }
 
 /** One LLM call for analyze — saves free-tier quota */
-const ANALYZE_SYSTEM = `You analyze a job vacancy and match it to a candidate using ONLY the provided knowledge base.
-Never invent experience. case_study projects (locus_chamber, eco_clean_map) are educational — skills demo only, not employment years.
+const ANALYZE_SYSTEM = `You analyze a job vacancy and match it to a candidate using ONLY the provided knowledge base and language rules.
+Never invent experience or language levels. case_study projects (locus_chamber, eco_clean_map) are educational — skills demo only, not employment years.
+
+LANGUAGE RULES (critical):
+- Candidate: Russian native; English C1 (NOT C2/native); German B1; French B1; Finnish & Afrikaans elementary only.
+- NO Chinese, Japanese, Korean, Arabic, etc.
+- If vacancy requires a language the candidate lacks (e.g. Chinese fluent) → fit_verdict "poor_fit", hard_blockers, match_percent ≤ 35.
+- If vacancy requires B2+ German/French but candidate has B1 → conditional_fit, note willingness to study to B2.
+- If vacancy requires native/C2 English but candidate has C1 → conditional_fit, not a hard blocker unless explicitly native-only.
+
 Return JSON only:
 {
   "title": string,
   "company": string,
   "language": "ru" | "en",
   "match_percent": number,
+  "fit_verdict": "strong_fit" | "conditional_fit" | "poor_fit",
   "highlights": string[],
   "expected_concerns": string[],
+  "language_gaps": string[],
+  "hard_blockers": string[],
   "cv_sections_to_boost": string[],
   "matched_projects": string[]
 }`;
 
 const CV_SYSTEM = `You tailor a CV in markdown for the vacancy using ONLY facts from the knowledge base.
-ATS-safe single-column markdown. No invented metrics. Return JSON only:
+ATS-safe single-column markdown. No invented metrics.
+
+MANDATORY in Summary / About Me / О себе (final line):
+- Portfolio: https://alicetcvetkova.github.io/portfolio/
+- LinkedIn: https://www.linkedin.com/in/alice-tsvetkova
+
+Return JSON only:
 {
   "cv_markdown": string,
   "ats_score": number,
@@ -148,42 +170,53 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const action = body.action as string;
-    const vacancy = (body.vacancy as string)?.trim();
+    const vacancyInput = (body.vacancy as string)?.trim();
     const variant = (body.variant as string) || "international";
 
-    if (!vacancy || vacancy.length < 30) {
+    if (!vacancyInput) {
+      return json({ error: "Vacancy URL or text is required" }, 400);
+    }
+    if (!isVacancyUrl(vacancyInput) && vacancyInput.length < 30) {
       return json({ error: "Vacancy text too short (min 30 chars)" }, 400);
     }
     if (!["analyze", "get_cv"].includes(action)) {
       return json({ error: "Invalid action" }, 400);
     }
 
+    const resolved = await resolveVacancyInput(vacancyInput);
+    if (resolved.text.length < 30) {
+      return json({
+        error: resolved.fetchedFromUrl
+          ? "Fetched page had too little text (login wall or empty page). Paste the full job description."
+          : "Vacancy text too short (min 30 chars)",
+      }, 400);
+    }
+
     const knowledge = await loadKnowledge();
     const projectsText = knowledge.projects.map((p) => p.content).join("\n\n---\n\n");
-    const vacancySlice = vacancy.slice(0, 10000);
+    const vacancySlice = resolved.text.slice(0, 10000);
 
     if (action === "analyze") {
-      const result = parseJson<{
-        match_percent: number;
-        highlights: string[];
-        expected_concerns: string[];
-        cv_sections_to_boost?: string[];
-        title?: string;
-        company?: string;
-      }>(
+      const raw = parseJson<AnalyzeResult>(
         await chat(
           ANALYZE_SYSTEM,
-          `## Vacancy\n${vacancySlice}\n\n## Profile\n${knowledge.profile.slice(0, 5000)}\n\n## Projects\n${projectsText.slice(0, 10000)}`,
+          `## Vacancy\n${vacancySlice}\n\n## Language rules\n${(knowledge.languages || "").slice(0, 3000)}\n\n## Profile\n${knowledge.profile.slice(0, 5000)}\n\n## Projects\n${projectsText.slice(0, 10000)}`,
         ),
       );
+      const result = applyLanguageAdjustments(vacancySlice, raw);
 
       return json({
         match_percent: result.match_percent,
+        fit_verdict: result.fit_verdict ?? "strong_fit",
         highlights: result.highlights,
         expected_concerns: result.expected_concerns,
+        language_gaps: result.language_gaps ?? [],
+        hard_blockers: result.hard_blockers ?? [],
         cv_sections_to_boost: result.cv_sections_to_boost ?? [],
-        vacancy_title: result.title,
-        vacancy_company: result.company,
+        vacancy_title: (raw as { title?: string }).title,
+        vacancy_company: (raw as { company?: string }).company,
+        fetched_from_url: resolved.fetchedFromUrl,
+        source_url: resolved.sourceUrl ?? null,
       });
     }
 
@@ -191,7 +224,7 @@ Deno.serve(async (req) => {
     const cvResult = parseJson<{ cv_markdown: string; ats_score: number; notes: string }>(
       await chat(
         CV_SYSTEM,
-        `## Vacancy\n${vacancySlice}\n\n## Base CV\n${baseCv}\n\n## Profile\n${knowledge.profile.slice(0, 4000)}\n\n## Projects\n${projectsText.slice(0, 8000)}\n\n## ATS rules\n${knowledge.ats_rules.slice(0, 2000)}`,
+        `## Vacancy\n${vacancySlice}\n\n## Base CV\n${baseCv}\n\n## Profile\n${knowledge.profile.slice(0, 4000)}\n\n## Projects\n${projectsText.slice(0, 8000)}\n\n## Portfolio rules\n${(knowledge.portfolio_sync || "").slice(0, 1500)}\n\n## ATS rules\n${knowledge.ats_rules.slice(0, 2000)}`,
       ),
     );
 
