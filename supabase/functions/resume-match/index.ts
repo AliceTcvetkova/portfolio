@@ -107,6 +107,11 @@ async function chatGroq(
         "CV generation hit token limit — retry in a moment or paste a shorter vacancy excerpt.",
       );
     }
+    if (isGroqTokenLimitError(err)) {
+      throw new Error(
+        "Groq token limit — vacancy or profile context is too large. Paste a shorter job description or retry in a minute.",
+      );
+    }
     throw new Error(`Groq error: ${res.status} ${err}`);
   }
 
@@ -114,8 +119,26 @@ async function chatGroq(
   return json.choices?.[0]?.message?.content ?? "";
 }
 
-async function chatGroqAnalyze(system: string, user: string): Promise<string> {
-  return chatGroq(system, user, { maxTokens: 2048, model: GROQ_MODEL });
+function isGroqTokenLimitError(err: string): boolean {
+  return (
+    err.includes("rate_limit_exceeded") ||
+    err.includes("Request too large") ||
+    err.includes("tokens per minute") ||
+    err.includes("\"code\":\"rate_limit_exceeded\"")
+  );
+}
+
+async function chatGroqAnalyze(
+  system: string,
+  buildUser: (scale: "normal" | "compact") => string,
+): Promise<string> {
+  try {
+    return await chatGroq(system, buildUser("normal"), { maxTokens: 1024, model: GROQ_MODEL });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!msg.includes("Groq token limit") && !isGroqTokenLimitError(msg)) throw e;
+    return chatGroq(system, buildUser("compact"), { maxTokens: 768, model: GROQ_MODEL });
+  }
 }
 
 async function chatGroqCv(system: string, user: string): Promise<string> {
@@ -124,21 +147,22 @@ async function chatGroqCv(system: string, user: string): Promise<string> {
 
 async function chat(
   system: string,
-  user: string,
+  user: string | ((scale: "normal" | "compact") => string),
   action: "analyze" | "get_cv" = "analyze",
 ): Promise<string> {
   if (LLM_PROVIDER === "groq") {
     return action === "get_cv"
-      ? chatGroqCv(system, user)
-      : chatGroqAnalyze(system, user);
+      ? chatGroqCv(system, user as string)
+      : chatGroqAnalyze(system, user as (scale: "normal" | "compact") => string);
   }
   if (GEMINI_API_KEY) {
-    return chatGemini(system, user);
+    const userText = typeof user === "function" ? user("normal") : user;
+    return chatGemini(system, userText);
   }
   if (GROQ_API_KEY) {
     return action === "get_cv"
-      ? chatGroqCv(system, user)
-      : chatGroqAnalyze(system, user);
+      ? chatGroqCv(system, user as string)
+      : chatGroqAnalyze(system, user as (scale: "normal" | "compact") => string);
   }
   throw new Error(
     "No LLM key configured. Set GROQ_API_KEY (recommended for RU) or GEMINI_API_KEY in Supabase Secrets.",
@@ -150,18 +174,44 @@ function parseJson<T>(raw: string): T {
   return JSON.parse(trimmed) as T;
 }
 
-/** One LLM call for analyze — saves free-tier quota */
-const ANALYZE_SYSTEM = `You analyze a job vacancy and match it to a candidate using ONLY the provided knowledge base and language rules.
-Never invent experience or language levels. case_study projects (locus_chamber, eco_clean_map) are educational — skills demo only, not employment years.
+function stripFrontmatter(text: string): string {
+  return text.replace(/^---[\s\S]*?---\n?/, "").trim();
+}
 
-LANGUAGE RULES (critical):
-- Candidate: Russian native; English C1 (NOT C2/native); German B1; French B1; Finnish & Afrikaans elementary only.
-- ONLY flag language_gaps / hard_blockers if the VACANCY TEXT explicitly requires that language (requirements section, fluent/native/B level, "must speak X").
-- Do NOT flag German, French, or English if the vacancy does not mention them as requirements.
-- Do NOT treat site navigation ("Deutsch | Français") or "job description in English" as language requirements.
-- Candidate's optional B1 DE/FR are NOT gaps unless the job asks for DE/FR.
-- Missing languages (Chinese, Japanese, etc.) → poor_fit only when explicitly required in vacancy.
+function compactText(text: string, maxLen: number): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length <= maxLen ? flat : flat.slice(0, maxLen - 1) + "…";
+}
 
+function compactProjectSummary(content: string, maxLen = 280): string {
+  return compactText(stripFrontmatter(content), maxLen);
+}
+
+/** Keep analyze prompt under Groq free-tier TPM (~6k tokens incl. completion). */
+function buildAnalyzeUserPrompt(
+  knowledge: Knowledge,
+  vacancyText: string,
+  scale: "normal" | "compact" = "normal",
+): string {
+  const limits =
+    scale === "compact"
+      ? { vacancy: 2200, profile: 800, projects: 1800, projectEach: 180 }
+      : { vacancy: 3500, profile: 1200, projects: 2800, projectEach: 280 };
+
+  const vacancy = compactText(vacancyText, limits.vacancy);
+  const profile = compactText(stripFrontmatter(knowledge.profile), limits.profile);
+  const projects = knowledge.projects
+    .map((p) => `### ${p.id}\n${compactProjectSummary(p.content, limits.projectEach)}`)
+    .join("\n\n")
+    .slice(0, limits.projects);
+
+  return `## Vacancy\n${vacancy}\n\n## Profile\n${profile}\n\n## Projects (summaries)\n${projects}`;
+}
+
+/** One LLM call for analyze — keep prompt small for Groq free TPM (6k). */
+const ANALYZE_SYSTEM = `Match a job vacancy to the candidate using ONLY the provided profile and project summaries.
+Never invent experience. case_study projects (locus_chamber, eco_clean_map) are educational demos, not employment years.
+Candidate languages: RU native; EN C1 (not C2); DE/FR B1; FI/AF elementary. Flag language_gaps only when vacancy explicitly requires a language.
 Return JSON only:
 {
   "title": string,
@@ -233,14 +283,13 @@ Deno.serve(async (req) => {
     }
 
     const knowledge = await loadKnowledge();
-    const projectsText = knowledge.projects.map((p) => p.content).join("\n\n---\n\n");
     const vacancySlice = resolved.text.slice(0, 10000);
 
     if (action === "analyze") {
       const raw = parseJson<AnalyzeResult>(
         await chat(
           ANALYZE_SYSTEM,
-          `## Vacancy\n${vacancySlice}\n\n## Language rules\n${(knowledge.languages || "").slice(0, 2000)}\n\n## Profile\n${knowledge.profile.slice(0, 3500)}\n\n## Projects\n${projectsText.slice(0, 6000)}`,
+          (scale) => buildAnalyzeUserPrompt(knowledge, vacancySlice, scale),
           "analyze",
         ),
       );
