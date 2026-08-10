@@ -211,13 +211,15 @@ function buildTemplateStoryboard(quests: string[], xp_goal: number, session: Ses
   const scenes: Record<string, string>[] = [
     {
       timecode: "0–2 sec", label: "Hook", on_screen_text: "Level 33 · сессия",
+      my_thought: "Level 33 — сегодня снова играю в свою жизнь.",
       shot_description: "Sketchbook или список квестов",
-      edit_note: "iMovie: резкий cut", resource_awarded: "", sticker_suggestion: "quest-shimmer.gif",
+      edit_note: "iMovie: резкий cut · 1.5 сек VO", resource_awarded: "", sticker_suggestion: "quest-shimmer.gif",
       learn_note: "",
     },
     {
       timecode: "2–6 sec", label: "Quest list", on_screen_text: `${quests.length} квестов`,
-      shot_description: "Scroll по списку дел", edit_note: "Max 6 слов", resource_awarded: "",
+      my_thought: "Это не todo-list, а квесты на одну сессию.",
+      shot_description: "Scroll по списку дел", edit_note: "Max 6 слов · 2 сек VO", resource_awarded: "",
       sticker_suggestion: "", learn_note: "",
     },
   ];
@@ -227,16 +229,19 @@ function buildTemplateStoryboard(quests: string[], xp_goal: number, session: Ses
     const [start, end] = blocks[i] ?? [26, 30];
     const { resource, amount, sticker, flow } = guessResource(quest);
     const verb = flow === "gain" ? "получено" : "потрачено";
+    const thought = `Квест «${quest.slice(0, 25)}» — ${verb} ${resource}.`;
     scenes.push({
       timecode: `${start}–${end} sec`, label: quest.slice(0, 30), on_screen_text: quest.slice(0, 40),
-      shot_description: `B-roll: ${quest}`, edit_note: "Cut 2–3 сек",
+      my_thought: thought,
+      shot_description: `B-roll: ${quest}`, edit_note: "Cut 2–3 сек · 1.5 сек VO",
       resource_awarded: `${amount} ${resource} (${verb})`, sticker_suggestion: sticker, learn_note: "",
     });
   });
 
   scenes.push({
     timecode: "28–35 sec", label: "Recap + fog", on_screen_text: "Кружка 🔒 до работы",
-    shot_description: "Баланс ресурсов + fog tease", edit_note: "SFX + музыка в Instagram",
+    my_thought: "За туманом — кружка, когда найду работу.",
+    shot_description: "Баланс ресурсов + fog tease", edit_note: "SFX + музыка · 2 сек VO финал",
     resource_awarded: "", sticker_suggestion: "sticker_new_quest_open.png", learn_note: "",
   });
 
@@ -266,7 +271,7 @@ async function generateStoryboard(session: Session) {
     if (last_storyboard?.scenes) {
       userMsg += `\nPrevious scenes: ${JSON.stringify((last_storyboard.scenes as unknown[]).slice(0, 4))}\n`;
     }
-    userMsg += `\nReturn JSON: total_seconds, player_level, resources_gained[], fog_tease, scenes[], agent_notes, video_learning{}.`;
+    userMsg += `\nReturn JSON: total_seconds, player_level, resources_gained[], fog_tease, scenes[] (each scene MUST include my_thought — one first-person VO sentence + VO time in edit_note), agent_notes, video_learning{}.`;
 
     const raw = await chatGroq(kb.system_prompt, userMsg);
     const data = extractJson(raw) as Record<string, unknown>;
@@ -334,6 +339,7 @@ function formatStoryboard(data: Record<string, unknown>): string {
   for (const [i, scene] of ((data.scenes as Record<string, string>[]) ?? []).entries()) {
     lines.push(`<b>${i + 1}. ${scene.timecode}</b> — ${scene.label}`);
     if (scene.on_screen_text) lines.push(`   📱 «${scene.on_screen_text}»`);
+    if (scene.my_thought) lines.push(`   🎙 «${scene.my_thought}»`);
     if (scene.shot_description) lines.push(`   🎥 ${scene.shot_description}`);
     if (scene.edit_note) lines.push(`   ✂️ ${scene.edit_note}`);
     if (scene.learn_note) lines.push(`   ${scene.learn_note}`);
@@ -417,6 +423,10 @@ export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseCli
   const chatId = msg.chat.id;
   if (ALLOWED.length && !ALLOWED.includes(String(chatId))) {
     console.warn("Unauthorized chat:", chatId);
+    await sendMessage(
+      chatId,
+      `⛔ Доступ только для владельца.\n\nТвой chat_id: <code>${chatId}</code>\nДобавь его в Supabase → Secrets → <code>TELEGRAM_ALLOWED_CHAT_IDS</code> и напиши /start снова.`,
+    );
     return;
   }
 
