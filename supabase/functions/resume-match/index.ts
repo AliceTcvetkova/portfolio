@@ -10,6 +10,8 @@ const GEMINI_MODEL =
   Deno.env.get("GEMINI_MODEL") ?? "gemini-2.0-flash-lite";
 const GROQ_MODEL =
   Deno.env.get("GROQ_MODEL") ?? "llama-3.1-8b-instant";
+const GROQ_CV_MODEL =
+  Deno.env.get("GROQ_CV_MODEL") ?? "llama-3.3-70b-versatile";
 const KNOWLEDGE_URL =
   Deno.env.get("RESUME_KNOWLEDGE_URL") ??
   "https://alicetcvetkova.github.io/portfolio/data/resume-knowledge.json";
@@ -72,7 +74,11 @@ async function chatGemini(system: string, user: string): Promise<string> {
   return json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 }
 
-async function chatGroq(system: string, user: string): Promise<string> {
+async function chatGroq(
+  system: string,
+  user: string,
+  opts: { maxTokens?: number; model?: string } = {},
+): Promise<string> {
   if (!GROQ_API_KEY) {
     throw new Error("GROQ_API_KEY not set");
   }
@@ -83,8 +89,9 @@ async function chatGroq(system: string, user: string): Promise<string> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: GROQ_MODEL,
+      model: opts.model ?? GROQ_MODEL,
       temperature: 0.2,
+      max_tokens: opts.maxTokens ?? 2048,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },
@@ -95,6 +102,11 @@ async function chatGroq(system: string, user: string): Promise<string> {
 
   if (!res.ok) {
     const err = await res.text();
+    if (err.includes("max completion tokens") || err.includes("json_validate_failed")) {
+      throw new Error(
+        "CV generation hit token limit — retry in a moment or paste a shorter vacancy excerpt.",
+      );
+    }
     throw new Error(`Groq error: ${res.status} ${err}`);
   }
 
@@ -102,15 +114,31 @@ async function chatGroq(system: string, user: string): Promise<string> {
   return json.choices?.[0]?.message?.content ?? "";
 }
 
-async function chat(system: string, user: string): Promise<string> {
+async function chatGroqAnalyze(system: string, user: string): Promise<string> {
+  return chatGroq(system, user, { maxTokens: 2048, model: GROQ_MODEL });
+}
+
+async function chatGroqCv(system: string, user: string): Promise<string> {
+  return chatGroq(system, user, { maxTokens: 8192, model: GROQ_CV_MODEL });
+}
+
+async function chat(
+  system: string,
+  user: string,
+  action: "analyze" | "get_cv" = "analyze",
+): Promise<string> {
   if (LLM_PROVIDER === "groq") {
-    return chatGroq(system, user);
+    return action === "get_cv"
+      ? chatGroqCv(system, user)
+      : chatGroqAnalyze(system, user);
   }
   if (GEMINI_API_KEY) {
     return chatGemini(system, user);
   }
   if (GROQ_API_KEY) {
-    return chatGroq(system, user);
+    return action === "get_cv"
+      ? chatGroqCv(system, user)
+      : chatGroqAnalyze(system, user);
   }
   throw new Error(
     "No LLM key configured. Set GROQ_API_KEY (recommended for RU) or GEMINI_API_KEY in Supabase Secrets.",
@@ -149,14 +177,16 @@ Return JSON only:
   "matched_projects": string[]
 }`;
 
-const CV_SYSTEM = `You tailor a CV in markdown for the vacancy using ONLY facts from the knowledge base.
-ATS-safe single-column markdown. No invented metrics.
+const CV_SYSTEM = `You tailor a CV in markdown for the vacancy using ONLY facts from the provided base CV.
+Reframe summary and bullets for the vacancy keywords. Do not invent facts.
+Keep EN CV to ~1 page (~70 lines markdown). RU CV to ~2 pages max.
+ATS-safe single-column markdown.
 
 MANDATORY in Summary / About Me / О себе (final line):
-- Portfolio: https://alicetcvetkova.github.io/portfolio/
-- LinkedIn: https://www.linkedin.com/in/alice-tsvetkova
+Portfolio: https://alicetcvetkova.github.io/portfolio/
+LinkedIn: https://www.linkedin.com/in/alice-tsvetkova
 
-Return JSON only:
+Return compact JSON only (escape newlines in cv_markdown as \\n):
 {
   "cv_markdown": string,
   "ats_score": number,
@@ -201,7 +231,8 @@ Deno.serve(async (req) => {
       const raw = parseJson<AnalyzeResult>(
         await chat(
           ANALYZE_SYSTEM,
-          `## Vacancy\n${vacancySlice}\n\n## Language rules\n${(knowledge.languages || "").slice(0, 3000)}\n\n## Profile\n${knowledge.profile.slice(0, 5000)}\n\n## Projects\n${projectsText.slice(0, 10000)}`,
+          `## Vacancy\n${vacancySlice}\n\n## Language rules\n${(knowledge.languages || "").slice(0, 2000)}\n\n## Profile\n${knowledge.profile.slice(0, 3500)}\n\n## Projects\n${projectsText.slice(0, 6000)}`,
+          "analyze",
         ),
       );
       const result = applyLanguageAdjustments(vacancySlice, raw);
@@ -222,15 +253,19 @@ Deno.serve(async (req) => {
     }
 
     const baseCv = variant === "russia" ? knowledge.cv_ru : knowledge.cv_en;
+    const cvUserPrompt =
+      `## Vacancy\n${vacancySlice.slice(0, 4000)}\n\n## Base CV (adapt this — do not add roles not listed here)\n${baseCv}\n\n## Tailoring hints\n${(knowledge.portfolio_sync || "").slice(0, 800)}`;
+
     const cvResult = parseJson<{ cv_markdown: string; ats_score: number; notes: string }>(
-      await chat(
-        CV_SYSTEM,
-        `## Vacancy\n${vacancySlice}\n\n## Base CV\n${baseCv}\n\n## Profile\n${knowledge.profile.slice(0, 4000)}\n\n## Projects\n${projectsText.slice(0, 8000)}\n\n## Portfolio rules\n${(knowledge.portfolio_sync || "").slice(0, 1500)}\n\n## ATS rules\n${knowledge.ats_rules.slice(0, 2000)}`,
-      ),
+      await chat(CV_SYSTEM, cvUserPrompt, "get_cv"),
     );
 
+    const cvMarkdown = cvResult.cv_markdown?.includes("\\n")
+      ? cvResult.cv_markdown.replace(/\\n/g, "\n")
+      : cvResult.cv_markdown;
+
     return json({
-      cv_markdown: cvResult.cv_markdown,
+      cv_markdown: cvMarkdown,
       ats_score: cvResult.ats_score,
       notes: cvResult.notes,
     });
