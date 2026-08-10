@@ -28,6 +28,7 @@
   let lastVacancy = "";
   let lastAnalyze = null;
   let lastCvData = null;
+  let lastCvVariant = "international";
 
   function setStatus(msg, type) {
     statusEl.textContent = msg || "";
@@ -101,6 +102,7 @@
 
   function renderCvPanel(data, variant) {
     lastCvData = data;
+    lastCvVariant = variant;
     if (!data || !data.cv || typeof window.renderCvDocument !== "function") {
       cvOutput.innerHTML = "<p>CV preview unavailable.</p>";
       return;
@@ -256,96 +258,26 @@
     }
   });
 
-  function loadScript(src) {
-    return new Promise(function (resolve, reject) {
-      if (document.querySelector('script[src="' + src + '"]')) {
-        resolve();
-        return;
-      }
-      var script = document.createElement("script");
-      script.src = src;
-      script.onload = function () {
-        resolve();
-      };
-      script.onerror = function () {
-        reject(new Error("PDF library failed to load"));
-      };
-      document.head.appendChild(script);
-    });
-  }
-
-  async function loadPdfLibs() {
-    await loadScript(
-      "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
-    );
-    await loadScript(
-      "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
-    );
-    if (!window.html2canvas || !window.jspdf?.jsPDF) {
-      throw new Error("PDF library failed to load");
-    }
-  }
-
-  function waitForLayout() {
-    return new Promise(function (resolve) {
-      requestAnimationFrame(function () {
-        requestAnimationFrame(resolve);
-      });
-    });
-  }
-
   async function saveCvAsPdf() {
-    var doc = cvOutput.querySelector(".cv-document");
-    if (!doc || !saveCvBtn) return;
+    if (!lastCvData || !lastCvData.cv || !saveCvBtn) return;
+    if (typeof window.saveCvPdfFile !== "function") {
+      setStatus("PDF module not loaded.", "error");
+      return;
+    }
 
     saveCvBtn.disabled = true;
     setStatus("Saving PDF…");
 
-    var exportRoot = document.createElement("div");
-    exportRoot.className = "cv-pdf-export-root";
-    var clone = doc.cloneNode(true);
-    exportRoot.appendChild(clone);
-    document.body.appendChild(exportRoot);
-
     try {
-      await loadPdfLibs();
-      await waitForLayout();
-
-      var canvas = await window.html2canvas(clone, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        scrollX: 0,
-        scrollY: 0,
-        width: clone.scrollWidth,
-        height: clone.scrollHeight,
-        windowWidth: clone.scrollWidth,
-        windowHeight: clone.scrollHeight
-      });
-
-      var pdf = new window.jspdf.jsPDF({ orientation: "p", unit: "mm", format: "a4" });
-      var pageWidth = pdf.internal.pageSize.getWidth();
-      var pageHeight = pdf.internal.pageSize.getHeight();
-      var imgWidth = pageWidth;
-      var imgHeight = (canvas.height * pageWidth) / canvas.width;
-      var imgData = canvas.toDataURL("image/jpeg", 0.95);
-      var offsetY = 0;
-      var page = 0;
-
-      while (offsetY < imgHeight) {
-        if (page > 0) pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, -offsetY, imgWidth, imgHeight);
-        offsetY += pageHeight;
-        page += 1;
-      }
-
-      pdf.save("Tsvetkova-tailored-cv.pdf");
+      await window.saveCvPdfFile(
+        lastCvData.cv,
+        lastCvVariant,
+        "Tsvetkova-tailored-cv.pdf"
+      );
       setStatus("PDF saved to Downloads.", "ok");
     } catch (err) {
       setStatus(err.message || "PDF save failed", "error");
     } finally {
-      if (exportRoot.parentNode) exportRoot.parentNode.removeChild(exportRoot);
       saveCvBtn.disabled = false;
     }
   }
