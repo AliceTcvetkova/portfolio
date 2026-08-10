@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <title>Reels Agent · Alice Tsvetkova</title>
+  <meta name="description" content="AI agent that turns your daily life into a Reels storyboard — game XP rules, format constraints, and iPhone + iMovie workflow.">
+  <script src="js/site-config.js"></script>
+  <script src="js/site-analytics.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/reels-agent.css">
+</head>
+<body data-sketches="reels-agent">
+
+  <header class="site-header">
+    <a class="site-header__logo" href="index.html">Alice Tsvetkova</a>
+    <nav class="site-header__nav">
+      <a href="index.html#cases">Selected Product Cases</a>
+      <a href="index.html#ideas">Personal Product Vision</a>
+      <a href="index.html#about">About me</a>
+      <a class="site-header__nav--resume" href="assets/resume/Tsvetkova-Product.pdf" target="_blank" rel="noopener noreferrer" download="Tsvetkova-Alice-Product-Manager-Resume.pdf">Resume (PDF)</a>
+    </nav>
+  </header>
+
+  <main class="case-detail reels-agent">
+    <a class="case-detail__back" href="index.html#ideas">← Back to personal product vision</a>
+    <p class="case-detail__label">Personal Product Vision · AI product + automation</p>
+    <h1>Reels Agent</h1>
+    <p>A personal AI agent that reads your day like a game, knows Reels format rules, and outputs a ready-to-shoot 35-second storyboard — tuned to your iPhone and iMovie setup.</p>
+
+    <section class="reels-agent__meta">
+      <dl class="reels-agent__grid">
+        <div>
+          <dt>User</dt>
+          <dd>@sashaiamdrawing — creator, Level 33</dd>
+        </div>
+        <div>
+          <dt>Problem</dt>
+          <dd>Turn real life into Reels without trend-chasing or generic templates</dd>
+        </div>
+        <div>
+          <dt>Solution</dt>
+          <dd>Telegram agent: quests → 5 resources → storyboard + video skills</dd>
+        </div>
+        <div>
+          <dt>Stack</dt>
+          <dd>Python · aiogram · Groq · knowledge base (Markdown)</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Architecture</h2>
+      <p>Portfolio case only — no public bot link. Live agent: Telegram webhook → <strong>Supabase Edge Function</strong> + Groq + Postgres session state (same Supabase project as Resume Agent).</p>
+      <ol class="reels-agent__pipeline">
+        <li>Telegram webhook → Supabase Edge Function</li>
+        <li>Session in Postgres — quests, skill progress</li>
+        <li>Knowledge JSON from GitHub Pages</li>
+        <li>Groq LLM — storyboard JSON</li>
+        <li>Reply — resources (+/−), scenes, 📚 learn-on-this-Reels</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>The idea</h2>
+      <p>Real life as an open-world game — five resources (Experience, Energy, Inspiration, Reputation, Coins), not one “productivity score”. Drawing <em>spends</em> Inspiration; family movie <em>gives</em> it. The agent turns today’s quests into a 35-second storyboard for iPhone + iMovie — and one video skill to learn on each Reels.</p>
+    </section>
+
+    <section class="reels-agent__layers">
+      <h2>Two knowledge layers</h2>
+      <div class="reels-agent__layer-grid">
+        <article class="reels-agent__layer">
+          <h3>Layer 1 · Game world</h3>
+          <p>Quests map to resources — gain or spend. Unlocks, fog of war, Level 33.</p>
+          <ul class="reels-agent__xp-list">
+            <li><span class="reels-agent__action">Job search</span><span class="reels-agent__xp">+15 Experience</span></li>
+            <li><span class="reels-agent__action">Draw / craft</span><span class="reels-agent__xp">− Inspiration</span></li>
+            <li><span class="reels-agent__action">Chores / plants</span><span class="reels-agent__xp">− Energy</span></li>
+          </ul>
+          <p class="reels-agent__note">Example input:</p>
+          <ul class="reels-agent__quests">
+            <li>Study Open World Design</li>
+            <li>Water flowers</li>
+            <li>Draw</li>
+            <li>Cook dinner</li>
+            <li>Go for a walk</li>
+          </ul>
+        </article>
+        <article class="reels-agent__layer">
+          <h3>Layer 2 · Reels format</h3>
+          <p>The agent knows platform rules and what keeps attention — and only suggests effects you can actually do.</p>
+          <ul>
+            <li>Up to 40 seconds; hook in the first 2 seconds</li>
+            <li>Cut every 2–3 seconds</li>
+            <li>Max 6 words on screen</li>
+            <li>Current trends, transitions, retention tricks</li>
+          </ul>
+          <p class="reels-agent__note">Your setup:</p>
+          <ul>
+            <li>Shot on iPhone</li>
+            <li>Edit in iMovie</li>
+            <li>PNG stickers available</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Example output · 35 sec storyboard</h2>
+      <ol class="reels-agent__storyboard">
+        <li>
+          <span class="reels-agent__time">0–2 sec</span>
+          <strong>Hook</strong>
+          <p>“Today I need to earn 100 XP.”</p>
+        </li>
+        <li>
+          <span class="reels-agent__time">2–6 sec</span>
+          <strong>Show planner</strong>
+          <p>Today’s quest list on screen.</p>
+        </li>
+        <li>
+          <span class="reels-agent__time">6–12 sec</span>
+          <strong>Study timelapse</strong>
+          <p>Learning Open World Design — timelapse clip.</p>
+        </li>
+        <li>
+          <span class="reels-agent__time">12–17 sec</span>
+          <strong>XP pop</strong>
+          <p>+15 Intelligence overlay.</p>
+        </li>
+        <li>
+          <span class="reels-agent__time">17–23 sec</span>
+          <strong>Water plants</strong>
+          <p>Action shot — watering flowers.</p>
+        </li>
+        <li>
+          <span class="reels-agent__time">23–28 sec</span>
+          <strong>XP pop</strong>
+          <p>+20 Nature XP overlay.</p>
+        </li>
+        <li>
+          <span class="reels-agent__time">28–35 sec</span>
+          <strong>Day recap</strong>
+          <p>Total XP earned, mood, tomorrow’s hook tease.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="reels-agent__status">
+      <h2>Status</h2>
+      <p><strong>MVP live</strong> on Supabase Edge (personal Telegram, not linked from this site). Resource economy, Groq storyboard, learn-on-each-Reels.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>© Alice Tsvetkova · Product Manager</p>
+  </footer>
+
+  <script src="js/i18n/dict-ru.js"></script>
+  <script src="js/i18n/dict-ru-attrs.js"></script>
+  <script src="js/site-i18n.js"></script>
+  <script src="js/sketch-bg.js"></script>
+</body>
+</html>

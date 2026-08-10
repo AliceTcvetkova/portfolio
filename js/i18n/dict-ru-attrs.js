@@ -19,6 +19,7 @@ window.SITE_I18N_RU_ATTRS = {
   "Evolution": "Evolution",
   "French bulldog": "Французский бульдог",
   "Game Worlds · Alice Tsvetkova": "Game Worlds · Alice Tsvetkova",
+  "Reels Agent · Alice Tsvetkova": "Reels Agent · Alice Tsvetkova",
   "Hand-drawn Locus Chamber mobile app wireframes — onboarding, rooms, library, profile": "Ручные вайрфреймы мобильного приложения Locus Chamber — онбординг, комнаты, библиотека, профиль",
   "House and garden": "Дом и сад",
   "IRPO · Alice Tsvetkova": "IRPO · Alice Tsvetkova",
