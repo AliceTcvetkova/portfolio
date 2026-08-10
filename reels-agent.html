@@ -8,7 +8,7 @@
   <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <title>Reels Agent · Alice Tsvetkova</title>
-  <meta name="description" content="Context-aware AI agent that turns daily quests into shoot-ready Reels storyboards — dual knowledge base, constraint-first generation, Supabase + Groq.">
+  <meta name="description" content="Personal AI agent for @sashaiamdrawing — my Level 33 game rules, my iPhone + iMovie setup, daily quests to Reels storyboard. Dogfooding, not a mass-market product.">
   <script src="js/site-config.js"></script>
   <script src="js/site-analytics.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,21 +33,21 @@
     <a class="case-detail__back" href="index.html#ideas">← Back to personal product vision</a>
     <p class="case-detail__label">Personal Product Vision · AI product + automation</p>
     <h1>Reels Agent</h1>
-    <p class="reels-agent__lede">A context-aware AI agent that closes the gap between <em>what happened today</em> and <em>what to film</em> — outputting a shoot-ready 35-second storyboard constrained by brand voice, game-world rules, and a real iPhone + iMovie workflow.</p>
+    <p class="reels-agent__lede">A personal AI agent I built for <a href="https://www.instagram.com/sashaiamdrawing" target="_blank" rel="noopener noreferrer">@sashaiamdrawing</a>: it knows <em>my</em> Level 33 rules, <em>my</em> iPhone + iMovie setup, and turns today’s real quests into a shoot-ready 35-second storyboard. Not a product for “all creators” — dogfooding a problem only I have.</p>
 
     <section class="reels-agent__meta">
       <dl class="reels-agent__grid">
         <div>
           <dt>Role</dt>
-          <dd>AI Product · end-to-end builder</dd>
+          <dd>AI Product · built for myself</dd>
         </div>
         <div>
-          <dt>User</dt>
-          <dd>Creator (@sashaiamdrawing) — process-first Reels, Level 33 life-game</dd>
+          <dt>Who it’s for</dt>
+          <dd>Me — one user, one blog, one game-world ruleset</dd>
         </div>
         <div>
           <dt>Job to be done</dt>
-          <dd>Daily quest list → structured storyboard + VO lines in under 2 minutes</dd>
+          <dd>My daily quest list → storyboard + VO lines without 30 min of planning</dd>
         </div>
         <div>
           <dt>Stack</dt>
@@ -57,23 +57,24 @@
     </section>
 
     <section>
-      <h2>Problem</h2>
-      <p>Creators who treat life as an open-world game still hit a production bottleneck: turning an honest to-do list into a Reels plan that <strong>feels on-brand</strong>, respects platform pacing, and matches actual gear — without copying viral templates.</p>
+      <h2>Why I built it</h2>
+      <p>I’m developing a Reels format for my own blog: daily life as an open-world game — five resources, unlocks, fog of war, Level 33. The idea is specific. Generic AI doesn’t know that drawing <em>spends</em> Inspiration or that my mug stays 🔒 until I find a job. ChatGPT suggests trend lip-sync; productivity apps give XP without shot structure.</p>
+      <p>My bottleneck was practical: every Reels took <strong>30+ minutes just to plan</strong> — what to film, in what order, what to say, which sticker pop matches which quest. I wanted that plan in Telegram in under a minute, already aligned with how I actually shoot and edit.</p>
       <ul class="reels-agent__bullets">
-        <li>Generic AI → trend lip-sync ideas that contradict the creator’s positioning</li>
-        <li>Productivity apps → XP gamification without narrative or shot structure</li>
-        <li>Manual planning → 30+ minutes per Reels before filming starts</li>
+        <li>Unique context — my resource economy, unlocks, and voice; not a reusable “creator template”</li>
+        <li>Hard constraints — iPhone 15 Pro, iMovie, headset mic; no CapCut fantasies</li>
+        <li>Honest scope — personal agent, allowlisted chat ID; not pretending this is a SaaS market</li>
       </ul>
     </section>
 
     <section>
-      <h2>Solution</h2>
-      <p>A personal Telegram agent with a <strong>revision loop</strong>: capture today’s quests, generate a JSON storyboard, iterate with natural-language edits. Output is production-ready — timecodes, on-screen text, VO thoughts, resource pops, and one filming + one editing skill per Reels.</p>
+      <h2>What it does</h2>
+      <p>A Telegram bot with a <strong>revision loop</strong> I use every shooting day: send real quests, get JSON storyboard, tweak with <code>/add</code> or <code>/rewrite</code>. Output includes timecodes, on-screen text, a VO line per scene (<code>my_thought</code>), resource gain/spend, and one filming + one editing skill from my video courses.</p>
       <ol class="reels-agent__pipeline">
-        <li><strong>/today</strong> — user sends real quests (no fake tasks)</li>
-        <li><strong>/storyboard</strong> — LLM + knowledge base → structured JSON</li>
-        <li><strong>/add · /rewrite</strong> — refine without restarting the session</li>
-        <li>Reply — scenes, resource gain/spend, 📚 learn-on-this-Reels block</li>
+        <li><strong>/today</strong> — I send today’s real quests</li>
+        <li><strong>/storyboard</strong> — LLM reads my knowledge base → JSON</li>
+        <li><strong>/add · /rewrite</strong> — I refine without starting over</li>
+        <li>Reply — scenes, +/− resources, 📚 one skill to practice on this Reels</li>
       </ol>
     </section>
 
@@ -90,23 +91,23 @@
     </section>
 
     <section class="reels-agent__layers">
-      <h2>Dual knowledge base</h2>
-      <p class="reels-agent__section-intro">Two constraint layers prevent generic “day in my life” output. The agent must satisfy both before suggesting a shot.</p>
+      <h2>My knowledge base</h2>
+      <p class="reels-agent__section-intro">The agent only works because the context is encoded — my game, my gear, my rules. Two layers, both personal:</p>
       <div class="reels-agent__layer-grid">
         <article class="reels-agent__layer">
-          <h3>Layer 1 · Game world</h3>
-          <p>Five resources with honest gain <em>and</em> spend rules — not a single productivity score.</p>
+          <h3>Layer 1 · My game world</h3>
+          <p>The resource system I designed for @sashaiamdrawing — gain and spend, not a generic streak counter.</p>
           <ul class="reels-agent__xp-list">
             <li><span class="reels-agent__action">Job search</span><span class="reels-agent__xp">+15 Experience</span></li>
             <li><span class="reels-agent__action">Draw / craft</span><span class="reels-agent__xp">− Inspiration</span></li>
             <li><span class="reels-agent__action">Chores / plants / pets</span><span class="reels-agent__xp">− Energy</span></li>
             <li><span class="reels-agent__action">Publish Reels</span><span class="reels-agent__xp">+25 Reputation</span></li>
           </ul>
-          <p class="reels-agent__note">Unlocks & fog of war (e.g. mug 🔒 until job found) drive narrative hooks.</p>
+          <p class="reels-agent__note">My unlocks — mug 🔒 until job, song cover progress — become narrative hooks in every storyboard.</p>
         </article>
         <article class="reels-agent__layer">
-          <h3>Layer 2 · Reels &amp; setup</h3>
-          <p>Platform format rules + creator constraints — only suggest what is actually feasible.</p>
+          <h3>Layer 2 · My Reels setup</h3>
+          <p>What I actually own and how I edit — the model can’t suggest what I can’t shoot tomorrow.</p>
           <ul>
             <li>35 sec target · hook in first 2 sec · cut every 2–3 sec</li>
             <li>Max 6 words on screen · 1.5–2 sec VO slot per scene (<code>my_thought</code>)</li>
@@ -122,26 +123,26 @@
       <div class="reels-agent__layer-grid">
         <article class="reels-agent__layer">
           <h3>Constraint-first generation</h3>
-          <p>Hard-coded equipment and format rules in the knowledge base beat post-hoc filtering — the model never suggests shots the user cannot execute.</p>
+          <p>Hard-coded in Markdown — my iPhone, iMovie, mic, stickers. Stops the model from suggesting shots I can’t execute.</p>
         </article>
         <article class="reels-agent__layer">
-          <h3>Author voice in every scene</h3>
-          <p>Each scene reserves time for a first-person VO line (<code>my_thought</code>) — process and personality, not just B-roll captions.</p>
+          <h3>My voice in every scene</h3>
+          <p>I asked for <code>my_thought</code> in each scene — a VO line in my words, not generic captions.</p>
         </article>
         <article class="reels-agent__layer">
-          <h3>Learn-on-each-Reels</h3>
-          <p>Rotating queue of filming + editing skills from active courses — content production doubles as deliberate practice.</p>
+          <h3>Learn while I publish</h3>
+          <p>Each storyboard pulls the next skill from my LearnWorlds / Sundance queue — filming practice tied to that day’s scenes.</p>
         </article>
         <article class="reels-agent__layer">
-          <h3>Serverless, not local polling</h3>
-          <p>Edge Function webhook on free tier — shared infra with Resume Agent, no always-on laptop, session persistence in Postgres.</p>
+          <h3>Serverless for one user</h3>
+          <p>Supabase Edge webhook — same project as Resume Agent. Runs without my laptop; session state in Postgres.</p>
         </article>
       </div>
     </section>
 
     <section>
       <h2>Example output · 35 sec storyboard</h2>
-      <p class="reels-agent__section-intro">Input: five real quests. Output excerpt — scenes with resource economy and VO thoughts.</p>
+      <p class="reels-agent__section-intro">Real input from one of my days. The agent mapped quests to my resource rules and wrote VO lines for me.</p>
       <ol class="reels-agent__storyboard">
         <li>
           <span class="reels-agent__time">0–2 sec</span>
@@ -178,12 +179,12 @@
     </section>
 
     <section class="reels-agent__status">
-      <h2>Status &amp; outcomes</h2>
-      <p><strong>MVP live</strong> — personal Telegram agent on Supabase Edge, Groq-powered storyboards, revision commands, resource economy, VO slots, and per-Reels skill rotation.</p>
+      <h2>Status</h2>
+      <p><strong>MVP live</strong> — I use it in Telegram daily. One allowlisted user, no public bot link on this site.</p>
       <ul class="reels-agent__bullets reels-agent__bullets--compact">
-        <li>Time to storyboard: ~30 sec (vs. manual planning)</li>
-        <li>Knowledge base: 8 Markdown sources → compact JSON for Edge runtime</li>
-        <li>Next: few-shot examples from published Reels, sticker preview in chat</li>
+        <li>Storyboard in ~30 sec vs. half an hour of manual planning</li>
+        <li>8 Markdown files → compact JSON; updates when I change my game rules</li>
+        <li>What I’d prove next: publish Reels from agent output and measure reach vs. my baseline</li>
       </ul>
     </section>
   </main>
