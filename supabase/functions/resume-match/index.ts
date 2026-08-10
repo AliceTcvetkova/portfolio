@@ -128,10 +128,11 @@ Never invent experience or language levels. case_study projects (locus_chamber, 
 
 LANGUAGE RULES (critical):
 - Candidate: Russian native; English C1 (NOT C2/native); German B1; French B1; Finnish & Afrikaans elementary only.
-- NO Chinese, Japanese, Korean, Arabic, etc.
-- If vacancy requires a language the candidate lacks (e.g. Chinese fluent) → fit_verdict "poor_fit", hard_blockers, match_percent ≤ 35.
-- If vacancy requires B2+ German/French but candidate has B1 → conditional_fit, note willingness to study to B2.
-- If vacancy requires native/C2 English but candidate has C1 → conditional_fit, not a hard blocker unless explicitly native-only.
+- ONLY flag language_gaps / hard_blockers if the VACANCY TEXT explicitly requires that language (requirements section, fluent/native/B level, "must speak X").
+- Do NOT flag German, French, or English if the vacancy does not mention them as requirements.
+- Do NOT treat site navigation ("Deutsch | Français") or "job description in English" as language requirements.
+- Candidate's optional B1 DE/FR are NOT gaps unless the job asks for DE/FR.
+- Missing languages (Chinese, Japanese, etc.) → poor_fit only when explicitly required in vacancy.
 
 Return JSON only:
 {

@@ -22,6 +22,24 @@ type LangRequirement = {
   required: boolean;
 };
 
+/** Languages that are blockers when mentioned anywhere in job requirements context */
+const STRICT_BLOCKER_LANGS = new Set([
+  "chinese",
+  "japanese",
+  "korean",
+  "arabic",
+  "spanish",
+]);
+
+/** DE/FR/EN — only flag when explicit requirement phrasing (avoid nav/footer noise) */
+const CONTEXT_SENSITIVE_LANGS = new Set([
+  "german",
+  "french",
+  "english",
+  "finnish",
+  "afrikaans",
+]);
+
 const LANG_DEFS: {
   key: string;
   displayName: string;
@@ -77,7 +95,7 @@ const LANG_DEFS: {
   {
     key: "finnish",
     displayName: "Finnish",
-    patterns: [/\bfinnish\b/i, /финск/i, /suomi/i],
+    patterns: [/\bfinnish\b/i, /финск/i, /\bsuomi\b/i],
   },
   {
     key: "afrikaans",
@@ -85,6 +103,9 @@ const LANG_DEFS: {
     patterns: [/\bafrikaans\b/i, /африкаанс/i],
   },
 ];
+
+const UI_NOISE =
+  /cookie|privacy policy|select language|choose language|lang=|hreflang|all rights reserved|©/i;
 
 function cefrLabel(n: number): string {
   const map: Record<number, string> = {
@@ -98,49 +119,131 @@ function cefrLabel(n: number): string {
   return map[n] ?? "?";
 }
 
+function getContextWindow(text: string, index: number, size = 100): string {
+  return text.slice(Math.max(0, index - size), index + size).toLowerCase();
+}
+
+/** Skip language switcher / footer noise from fetched HTML */
+function isUiNoise(context: string): boolean {
+  if (UI_NOISE.test(context)) return true;
+  // "English | Deutsch | Français" style menus
+  if (/(english|deutsch|français|russian)\s*[|/·•]\s*(english|deutsch|français|russian)/i.test(context)) {
+    return true;
+  }
+  return false;
+}
+
+/** "Job description in English" — not a language requirement */
+function isPostingLanguageNote(context: string): boolean {
+  return /(?:job|vacancy|position|role|description|posting|описание|вакансия|должност)[\s\S]{0,40}(?:in|на)\s+(?:english|английск)|(?:english|английск)[\s\S]{0,25}(?:job|vacancy|description|posting|описание|вакансия)/i
+    .test(context);
+}
+
+/** Explicit requirement phrasing near the language mention */
+function hasExplicitRequirementContext(context: string, langKey: string): boolean {
+  if (isUiNoise(context) || isPostingLanguageNote(context)) return false;
+
+  const signals = [
+    /languages?\s*[:\-–]/,
+    /language requirements?/,
+    /язык(и)?\s*[:\-–]/,
+    /языковые требования/,
+    /must speak/,
+    /fluent in/,
+    /native speaker/,
+    /носитель/,
+    /обязательн/,
+    /необходим/,
+    /требуется/,
+    /владение/,
+    /знание\s+языка/,
+    /proficiency/,
+    /required/,
+    /\bb[12]\b/,
+    /\bc[12]\b/,
+    /upper[- ]intermediate/,
+    /advanced/,
+    /свободн(?:ое|ый|о)?\s+(?:владение|знание)/,
+  ];
+
+  if (signals.some((r) => r.test(context))) return true;
+
+  const langWord = langKey === "german"
+    ? "german|deutsch|немецк"
+    : langKey === "french"
+    ? "french|français|французск"
+    : langKey === "english"
+    ? "english|английск"
+    : langKey;
+
+  const paired = new RegExp(
+    `(?:${langWord})[\\s\\S]{0,45}(?:b[12]|c[12]|fluent|native|required|proficiency|обязательн|свободн|владение)|` +
+      `(?:b[12]|c[12]|fluent|native|required|proficiency|обязательн|свободн|владение)[\\s\\S]{0,45}(?:${langWord})`,
+    "i",
+  );
+  return paired.test(context);
+}
+
 function parseMinCefr(snippet: string, langKey: string): number {
   const s = snippet.toLowerCase();
   if (/native|родной|носитель|bilingual|двуязыч/i.test(s)) return 6;
   if (/\bc2\b|proficiency.*c2/i.test(s)) return 6;
-  if (/\bc1\b|advanced|upper[- ]intermediate|свободн/i.test(s)) return 5;
-  if (/\bb2\b|fluent|flowing|business|delov|рабоч/i.test(s)) return 4;
+  if (/\bc1\b|advanced|upper[- ]intermediate/i.test(s)) return 5;
+  if (/\bb2\b|fluent|business|рабоч/i.test(s)) return 4;
   if (/\bb1\b|intermediate|средн/i.test(s)) return 3;
   if (/\ba2\b/i.test(s)) return 2;
   if (/\ba1\b|basic|beginner|базов|начальн/i.test(s)) return 1;
-  // Default if language mentioned without level — assume working B2 for "required" languages
   if (langKey === "english") return 4;
-  if (["chinese", "japanese", "korean", "arabic"].includes(langKey)) return 4;
-  return 3;
+  if (STRICT_BLOCKER_LANGS.has(langKey)) return 4;
+  return 0; // no level inferred — do not create gap without explicit level
 }
 
-function isMustHaveContext(text: string, index: number): boolean {
-  const window = text.slice(Math.max(0, index - 120), index + 120).toLowerCase();
-  return /must|required|обязательн|must-have|essential|необходим|fluent|native|nositel|nositel/i
-    .test(window);
+function shouldCountRequirement(
+  langKey: string,
+  context: string,
+  minCefr: number,
+): boolean {
+  if (STRICT_BLOCKER_LANGS.has(langKey)) {
+    return hasExplicitRequirementContext(context, langKey) ||
+      /китайsk|mandarin|chinese|японsk|japanese|корейsk|korean|арабsk|arabic|испанsk|spanish/i.test(context);
+  }
+  if (CONTEXT_SENSITIVE_LANGS.has(langKey)) {
+    if (!hasExplicitRequirementContext(context, langKey)) return false;
+    // English mentioned only as posting language — OK for C1 candidate
+    if (langKey === "english" && isPostingLanguageNote(context) && minCefr < 6) {
+      return false;
+    }
+    return minCefr > 0;
+  }
+  return false;
 }
 
 export function detectLanguageRequirements(vacancy: string): LangRequirement[] {
   const found: LangRequirement[] = [];
-  const lower = vacancy.toLowerCase();
 
   for (const def of LANG_DEFS) {
     for (const pattern of def.patterns) {
-      const match = pattern.exec(vacancy);
-      if (!match) continue;
-      const idx = match.index ?? 0;
-      const context = lower.slice(Math.max(0, idx - 80), idx + 80);
-      const minCefr = parseMinCefr(context, def.key);
-      const required = isMustHaveContext(vacancy, idx) ||
-        /required|must|fluent|native|обязательн|свободн/i.test(context);
-      if (!found.some((f) => f.lang === def.key)) {
-        found.push({
-          lang: def.key,
-          displayName: def.displayName,
-          minCefr,
-          required: required || minCefr >= 4,
-        });
+      const re = new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : pattern.flags + "g");
+      let match: RegExpExecArray | null;
+      while ((match = re.exec(vacancy)) !== null) {
+        const idx = match.index ?? 0;
+        const context = getContextWindow(vacancy, idx, 120);
+        const minCefr = parseMinCefr(context, def.key);
+        if (!shouldCountRequirement(def.key, context, minCefr)) continue;
+
+        const required = /must|required|обязательн|essential|необходим|fluent|native|nositel|требуется/i
+          .test(context) || minCefr >= 4;
+
+        if (!found.some((f) => f.lang === def.key)) {
+          found.push({
+            lang: def.key,
+            displayName: def.displayName,
+            minCefr: minCefr || (def.key === "english" ? 4 : 4),
+            required,
+          });
+        }
+        break;
       }
-      break;
     }
   }
   return found;
@@ -172,14 +275,14 @@ export function computeLanguageGaps(vacancy: string): LanguageAdjustResult {
 
     if (have === 0) {
       const msg =
-        `${req.displayName} required (${needLabel}+) - not in candidate profile (only: EN C1, DE/FR B1, FI/AF elementary)`;
+        `${req.displayName} required (${needLabel}+) - not in candidate profile`;
       language_gaps.push(msg);
       if (req.required || req.minCefr >= 4) {
         hard_blockers.push(msg);
         matchPenalty += 30;
         fitHint = "poor_fit";
       } else {
-        matchPenalty += 15;
+        matchPenalty += 10;
         if (!fitHint) fitHint = "conditional_fit";
       }
       continue;
@@ -192,19 +295,31 @@ export function computeLanguageGaps(vacancy: string): LanguageAdjustResult {
       if (req.lang === "english" && req.minCefr >= 6) {
         hard_blockers.push(`${gap} - candidate has English C1, not C2/native`);
         matchPenalty += 12;
-        if (!fitHint || fitHint === "conditional_fit") fitHint = "conditional_fit";
+        fitHint = fitHint ?? "conditional_fit";
       } else if (["german", "french"].includes(req.lang) && req.minCefr >= 4) {
-        language_gaps.push(`${req.displayName}: B1 now; can study toward B2`);
-        matchPenalty += req.required ? 15 : 8;
-        if (!fitHint) fitHint = "conditional_fit";
+        language_gaps.push(`${req.displayName}: B1 now; can study toward B2 if needed`);
+        matchPenalty += req.required ? 12 : 6;
+        fitHint = fitHint ?? "conditional_fit";
       } else if (req.required) {
-        matchPenalty += 10;
-        if (!fitHint) fitHint = "conditional_fit";
+        matchPenalty += 8;
+        fitHint = fitHint ?? "conditional_fit";
       }
     }
   }
 
   return { language_gaps, hard_blockers, matchPenalty, fitHint };
+}
+
+const LANGUAGE_CONCERN =
+  /\b(chinese|mandarin|japanese|korean|arabic|spanish|german|french|english|finnish|afrikaans|китайск|немецк|французск|английск|японsk|корейsk)\b|language gap|blocker:/i;
+
+/** Remove LLM-invented language concerns when vacancy has no explicit requirement */
+export function filterLlmLanguageNoise(
+  concerns: string[],
+  deterministicGaps: string[],
+): string[] {
+  if (deterministicGaps.length > 0) return concerns;
+  return concerns.filter((c) => !LANGUAGE_CONCERN.test(c));
 }
 
 export type AnalyzeResult = {
@@ -223,10 +338,14 @@ export function applyLanguageAdjustments(
   result: AnalyzeResult,
 ): AnalyzeResult {
   const adj = computeLanguageGaps(vacancy);
-  if (!adj.language_gaps.length) return result;
+  const deterministicGaps = adj.language_gaps;
 
-  const concerns = new Set(result.expected_concerns ?? []);
-  for (const g of adj.language_gaps) concerns.add(g);
+  const filteredConcerns = filterLlmLanguageNoise(
+    result.expected_concerns ?? [],
+    deterministicGaps,
+  );
+  const concerns = new Set(filteredConcerns);
+  for (const g of deterministicGaps) concerns.add(g);
   for (const b of adj.hard_blockers) concerns.add(`Blocker: ${b}`);
 
   let match = result.match_percent;
@@ -235,16 +354,21 @@ export function applyLanguageAdjustments(
   }
 
   let fit_verdict = result.fit_verdict ?? "strong_fit";
-  if (adj.hard_blockers.length) fit_verdict = "poor_fit";
-  else if (adj.language_gaps.length && fit_verdict === "strong_fit") {
+  if (adj.hard_blockers.length) {
+    fit_verdict = "poor_fit";
+  } else if (deterministicGaps.length) {
     fit_verdict = adj.fitHint ?? "conditional_fit";
+  } else if (fit_verdict === "poor_fit" || fit_verdict === "conditional_fit") {
+    // LLM over-flagged languages — reset unless other concerns justify it
+    const nonLangConcerns = filteredConcerns.filter((c) => !LANGUAGE_CONCERN.test(c));
+    fit_verdict = nonLangConcerns.length ? "conditional_fit" : "strong_fit";
   }
 
   return {
     ...result,
     match_percent: match,
     expected_concerns: [...concerns],
-    language_gaps: adj.language_gaps,
+    language_gaps: deterministicGaps,
     hard_blockers: adj.hard_blockers,
     fit_verdict,
   };
