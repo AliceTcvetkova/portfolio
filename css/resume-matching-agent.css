@@ -333,34 +333,6 @@
   margin-bottom: 0.25rem;
 }
 
-@media print {
-  body.resume-agent-printing * {
-    visibility: hidden;
-  }
-
-  body.resume-agent-printing #cv-document-print,
-  body.resume-agent-printing #cv-document-print * {
-    visibility: visible;
-  }
-
-  body.resume-agent-printing #cv-document-print {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    box-shadow: none;
-    padding: 0.5in;
-  }
-
-  body.resume-agent-printing .resume-agent__cv-preview {
-    max-height: none;
-    overflow: visible;
-    border: none;
-    background: #fff;
-    padding: 0;
-  }
-}
-
 .resume-agent__cv-notes {
   margin: 0.75rem 0 0;
   font-size: 0.8125rem;

@@ -23,7 +23,7 @@
   const concernsList = document.getElementById("concerns-list");
   const cvOutput = document.getElementById("cv-output");
   const cvNotes = document.getElementById("cv-notes");
-  const printCvBtn = document.getElementById("print-cv-btn");
+  const saveCvBtn = document.getElementById("save-cv-btn");
 
   let lastVacancy = "";
   let lastAnalyze = null;
@@ -256,16 +256,61 @@
     }
   });
 
-  if (printCvBtn) {
-    printCvBtn.addEventListener("click", function () {
-      if (!cvOutput.querySelector(".cv-document")) return;
-      document.body.classList.add("resume-agent-printing");
-      window.print();
-      window.addEventListener("afterprint", function cleanup() {
-        document.body.classList.remove("resume-agent-printing");
-        window.removeEventListener("afterprint", cleanup);
-      });
+  function loadHtml2Pdf() {
+    return new Promise(function (resolve, reject) {
+      if (window.html2pdf) {
+        resolve(window.html2pdf);
+        return;
+      }
+      var script = document.createElement("script");
+      script.src =
+        "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+      script.onload = function () {
+        if (window.html2pdf) resolve(window.html2pdf);
+        else reject(new Error("PDF library failed to load"));
+      };
+      script.onerror = function () {
+        reject(new Error("PDF library failed to load"));
+      };
+      document.head.appendChild(script);
     });
+  }
+
+  async function saveCvAsPdf() {
+    var doc = cvOutput.querySelector(".cv-document");
+    if (!doc || !saveCvBtn) return;
+
+    saveCvBtn.disabled = true;
+    setStatus("Saving PDF…");
+
+    try {
+      var html2pdf = await loadHtml2Pdf();
+      var prevShadow = doc.style.boxShadow;
+      doc.style.boxShadow = "none";
+
+      await html2pdf()
+        .set({
+          margin: [0.45, 0.5, 0.45, 0.5],
+          filename: "Tsvetkova-tailored-cv.pdf",
+          image: { type: "jpeg", quality: 0.95 },
+          html2canvas: { scale: 2, logging: false, useCORS: true },
+          jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["css", "legacy"] }
+        })
+        .from(doc)
+        .save();
+
+      doc.style.boxShadow = prevShadow;
+      setStatus("PDF saved to Downloads.", "ok");
+    } catch (err) {
+      setStatus(err.message || "PDF save failed", "error");
+    } finally {
+      saveCvBtn.disabled = false;
+    }
+  }
+
+  if (saveCvBtn) {
+    saveCvBtn.addEventListener("click", saveCvAsPdf);
   }
 
   if (isLiveMode()) {
