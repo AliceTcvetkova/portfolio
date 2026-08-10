@@ -177,18 +177,27 @@ Return JSON only:
   "matched_projects": string[]
 }`;
 
-const CV_SYSTEM = `You tailor a CV in markdown for the vacancy using ONLY facts from the provided base CV.
-Reframe summary and bullets for the vacancy keywords. Do not invent facts.
-Keep EN CV to ~1 page (~70 lines markdown). RU CV to ~2 pages max.
-ATS-safe single-column markdown.
+const CV_SYSTEM = `You tailor a CV using ONLY facts from the provided base CV. Reframe summary and bullets for vacancy keywords. Do not invent facts.
+Keep EN CV ~1 page (4-5 roles max, 3-5 bullets on recent role). RU CV ~2 pages max.
+ATS-safe single column content.
 
-MANDATORY in Summary / About Me / О себе (final line):
+Include in contact_line or summary footer:
 Portfolio: https://alicetcvetkova.github.io/portfolio/
 LinkedIn: https://www.linkedin.com/in/alice-tsvetkova
 
-Return compact JSON only (escape newlines in cv_markdown as \\n):
+Return JSON only (no markdown):
 {
-  "cv_markdown": string,
+  "full_name": string,
+  "headline": string,
+  "contact_line": string,
+  "summary": string,
+  "experience": [{"role": string, "company": string, "dates": string, "bullets": string[]}],
+  "skills": string,
+  "education": string[],
+  "certifications": string[],
+  "languages": string,
+  "portfolio_url": "https://alicetcvetkova.github.io/portfolio/",
+  "linkedin_url": "https://www.linkedin.com/in/alice-tsvetkova",
   "ats_score": number,
   "notes": string
 }`;
@@ -253,21 +262,40 @@ Deno.serve(async (req) => {
     }
 
     const baseCv = variant === "russia" ? knowledge.cv_ru : knowledge.cv_en;
-    const cvUserPrompt =
-      `## Vacancy\n${vacancySlice.slice(0, 4000)}\n\n## Base CV (adapt this — do not add roles not listed here)\n${baseCv}\n\n## Tailoring hints\n${(knowledge.portfolio_sync || "").slice(0, 800)}`;
+    const langNote = variant === "russia"
+      ? "Write CV content in Russian (section content and bullets)."
+      : "Write CV content in English.";
 
-    const cvResult = parseJson<{ cv_markdown: string; ats_score: number; notes: string }>(
+    const cvUserPrompt =
+      `## Variant\n${langNote}\n\n## Vacancy\n${vacancySlice.slice(0, 4000)}\n\n## Base CV (adapt — do not add roles not listed here)\n${baseCv}\n\n## Tailoring hints\n${(knowledge.portfolio_sync || "").slice(0, 800)}`;
+
+    type CvPayload = {
+      full_name?: string;
+      headline?: string;
+      contact_line?: string;
+      summary?: string;
+      experience?: Array<{ role?: string; company?: string; dates?: string; bullets?: string[] }>;
+      skills?: string;
+      education?: string[];
+      certifications?: string[];
+      languages?: string;
+      portfolio_url?: string;
+      linkedin_url?: string;
+      ats_score?: number;
+      notes?: string;
+      cv_markdown?: string;
+    };
+
+    const cvResult = parseJson<CvPayload>(
       await chat(CV_SYSTEM, cvUserPrompt, "get_cv"),
     );
 
-    const cvMarkdown = cvResult.cv_markdown?.includes("\\n")
-      ? cvResult.cv_markdown.replace(/\\n/g, "\n")
-      : cvResult.cv_markdown;
+    const { cv_markdown: _legacy, ats_score, notes, ...cvFields } = cvResult;
 
     return json({
-      cv_markdown: cvMarkdown,
-      ats_score: cvResult.ats_score,
-      notes: cvResult.notes,
+      cv: cvFields,
+      ats_score: ats_score ?? 0,
+      notes: notes ?? "",
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";

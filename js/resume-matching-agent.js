@@ -23,10 +23,11 @@
   const concernsList = document.getElementById("concerns-list");
   const cvOutput = document.getElementById("cv-output");
   const cvNotes = document.getElementById("cv-notes");
-  const downloadCvBtn = document.getElementById("download-cv-btn");
+  const printCvBtn = document.getElementById("print-cv-btn");
 
   let lastVacancy = "";
   let lastAnalyze = null;
+  let lastCvData = null;
 
   function setStatus(msg, type) {
     statusEl.textContent = msg || "";
@@ -98,6 +99,20 @@
     getCvBtn.disabled = data.fit_verdict === "poor_fit" || Number(pct) < 25;
   }
 
+  function renderCvPanel(data, variant) {
+    lastCvData = data;
+    if (!data || !data.cv || typeof window.renderCvDocument !== "function") {
+      cvOutput.innerHTML = "<p>CV preview unavailable.</p>";
+      return;
+    }
+    cvOutput.innerHTML = window.renderCvDocument(data.cv, variant);
+    cvNotes.textContent = data.notes
+      ? "ATS score: " + (data.ats_score != null ? Math.round(data.ats_score * 100) + "%" : "—") + " · " + data.notes
+      : data.ats_score != null
+        ? "ATS score: " + Math.round(data.ats_score * 100) + "%"
+        : "";
+  }
+
   async function fetchVacancyText(input) {
     const trimmed = input.trim();
     if (/^https?:\/\//i.test(trimmed) && trimmed.length < 2000 && !trimmed.includes("\n")) {
@@ -113,7 +128,7 @@
     const fn = cfg.functionName || "resume-match";
 
     if (!isLiveMode()) {
-      return demoResponse(action, vacancy);
+      return demoResponse(action, vacancy, variant);
     }
 
     const endpoint = url.replace(/\/$/, "") + "/functions/v1/" + fn;
@@ -132,7 +147,7 @@
     return data;
   }
 
-  function demoResponse(action, vacancy) {
+  function demoResponse(action, vacancy, variant) {
     const lower = vacancy.toLowerCase();
     const gaming = /game|gaming|ea |unity|unreal/.test(lower);
     const highlights = [
@@ -170,10 +185,37 @@
     }
 
     return {
-      match_percent: gaming ? 72 : 78,
-      cv_markdown: "# Alice Tsvetkova\nProduct & Delivery Manager\n\n(Demo mode — deploy Supabase function for live CV.\nSee docs/resume-agent-setup.md)\n\n## Experience\n- Ozon Bank · Oct 2024 – Apr 2026\n- IRPO · Apr 2022 – Jun 2024\n…",
-      ats_score: 80,
-      notes: "Demo output. Configure resume-agent-config.js + deploy edge function for tailored CV."
+      ats_score: 0.8,
+      notes: "Demo preview — connect Supabase for live tailored CV.",
+      cv: {
+        full_name: "Alice Tsvetkova",
+        headline: variant === "russia" ? "Product Manager · 10+ лет" : "Product & Delivery Manager",
+        contact_line: "+7 (910) 545-60-06 · 1409alice@gmail.com · Remote",
+        summary: variant === "russia"
+          ? "Product Manager с опытом в FinTech, EdTech и platform PM. 100+ CustDev, 20+ команд."
+          : "Product & Delivery Manager with 10+ years in EdTech, FinTech and platform products.",
+        experience: [
+          {
+            role: "Product Manager",
+            company: "Ozon Bank",
+            dates: "Oct 2024 – Apr 2026",
+            bullets: [
+              "Launched Early Payments product in 9 months with 20+ teams",
+              "Contributed to 5% annual bank turnover growth"
+            ]
+          },
+          {
+            role: "Product Manager",
+            company: "IRPO",
+            dates: "Apr 2022 – Jun 2024",
+            bullets: ["100+ user interviews; platform concept to pilot in 1 year"]
+          }
+        ],
+        skills: "Product Management · Delivery · SQL · Agile · CustDev · Roadmaps",
+        education: ["University of Cape Town — Marketing, 2019", "SUM Moscow — Financial Management, 2015"],
+        certifications: ["META — Marketing Analytics, 2022"],
+        languages: "Russian — Native · English — C1 · German — B1 · French — B1"
+      }
     };
   }
 
@@ -198,17 +240,15 @@
 
   getCvBtn.addEventListener("click", async function () {
     if (!lastVacancy) return;
+    const variant = getVariant();
     setLoading(true);
     setStatus("Generating tailored CV…");
 
     try {
-      const data = await callAgent("get_cv", lastVacancy, getVariant());
-      cvOutput.textContent = data.cv_markdown || "";
-      cvNotes.textContent = data.notes
-        ? "ATS score: " + (data.ats_score || "—") + " · " + data.notes
-        : "";
+      const data = await callAgent("get_cv", lastVacancy, variant);
+      renderCvPanel(data, variant);
       cvPanel.hidden = false;
-      setStatus("CV ready.", "ok");
+      setStatus("CV ready — formatted preview below.", "ok");
     } catch (err) {
       setStatus(err.message || "CV generation failed", "error");
     } finally {
@@ -216,16 +256,17 @@
     }
   });
 
-  downloadCvBtn.addEventListener("click", function () {
-    const text = cvOutput.textContent;
-    if (!text) return;
-    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "Tsvetkova-tailored-cv.md";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  });
+  if (printCvBtn) {
+    printCvBtn.addEventListener("click", function () {
+      if (!cvOutput.querySelector(".cv-document")) return;
+      document.body.classList.add("resume-agent-printing");
+      window.print();
+      window.addEventListener("afterprint", function cleanup() {
+        document.body.classList.remove("resume-agent-printing");
+        window.removeEventListener("afterprint", cleanup);
+      });
+    });
+  }
 
   if (isLiveMode()) {
     setStatus("Live mode — LLM backend connected.", "ok");

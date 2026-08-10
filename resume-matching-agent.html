@@ -131,9 +131,11 @@
       <div class="resume-agent__cv" id="cv-panel" hidden>
         <div class="resume-agent__cv-header">
           <h3>Tailored CV</h3>
-          <button type="button" class="btn btn--small" id="download-cv-btn">Download .md</button>
+          <div class="resume-agent__cv-actions">
+            <button type="button" class="btn btn--small" id="print-cv-btn">Save as PDF</button>
+          </div>
         </div>
-        <pre class="resume-agent__cv-body" id="cv-output"></pre>
+        <div class="resume-agent__cv-preview" id="cv-output"></div>
         <p class="resume-agent__cv-notes" id="cv-notes"></p>
       </div>
     </section>
@@ -153,6 +155,7 @@
   <script src="js/i18n/dict-ru-attrs.js"></script>
   <script src="js/site-i18n.js"></script>
   <script src="js/sketch-bg.js"></script>
+  <script src="js/cv-template.js"></script>
   <script src="js/resume-matching-agent.js"></script>
 </body>
 </html>

@@ -229,20 +229,136 @@
   font-weight: 600;
 }
 
-.resume-agent__cv-body {
-  max-height: 420px;
+.resume-agent__cv-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.resume-agent__cv-preview {
+  max-height: 720px;
   overflow: auto;
-  margin: 0;
-  padding: 1rem 1.125rem;
-  font-family: ui-monospace, "Cascadia Code", monospace;
-  font-size: 0.75rem;
-  line-height: 1.55;
-  color: var(--text-muted);
-  background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  white-space: pre-wrap;
-  word-break: break-word;
+  background: #eef0f4;
+  padding: 1rem;
+}
+
+/* ATS-style CV document (single column, print-ready) */
+.cv-document {
+  background: #ffffff;
+  color: #1a1a1a;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 2rem 2.25rem;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.12);
+}
+
+.cv-document__name {
+  margin: 0;
+  font-size: 20pt;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #111;
+}
+
+.cv-document__headline {
+  margin: 0.2rem 0 0.5rem;
+  font-size: 11pt;
+  font-weight: 600;
+  color: #333;
+}
+
+.cv-document__contact,
+.cv-document__links {
+  margin: 0.15rem 0;
+  font-size: 9.5pt;
+  color: #444;
+}
+
+.cv-document__links a {
+  color: #1a56db;
+  text-decoration: none;
+}
+
+.cv-document__section {
+  margin-top: 1.1rem;
+}
+
+.cv-document__section-title {
+  margin: 0 0 0.45rem;
+  font-size: 10pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #111;
+  border-bottom: 1px solid #bbb;
+  padding-bottom: 0.2rem;
+}
+
+.cv-document__summary,
+.cv-document__skills,
+.cv-document__languages {
+  margin: 0;
+}
+
+.cv-document__job {
+  margin-bottom: 0.85rem;
+}
+
+.cv-document__job-title {
+  font-size: 10.5pt;
+}
+
+.cv-document__job-company {
+  font-weight: 600;
+}
+
+.cv-document__job-dates {
+  font-size: 9.5pt;
+  color: #555;
+  margin-top: 0.1rem;
+}
+
+.cv-document__bullets,
+.cv-document__list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.cv-document__bullets li,
+.cv-document__list li {
+  margin-bottom: 0.25rem;
+}
+
+@media print {
+  body.resume-agent-printing * {
+    visibility: hidden;
+  }
+
+  body.resume-agent-printing #cv-document-print,
+  body.resume-agent-printing #cv-document-print * {
+    visibility: visible;
+  }
+
+  body.resume-agent-printing #cv-document-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none;
+    padding: 0.5in;
+  }
+
+  body.resume-agent-printing .resume-agent__cv-preview {
+    max-height: none;
+    overflow: visible;
+    border: none;
+    background: #fff;
+    padding: 0;
+  }
 }
 
 .resume-agent__cv-notes {
