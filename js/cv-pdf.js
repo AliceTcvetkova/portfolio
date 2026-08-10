@@ -20,11 +20,19 @@
     }
   };
 
-  var FONT_URL =
-    "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts@v20201228/hinted/ttf/NotoSans/NotoSans-Regular.ttf";
+  var FONT_PATH = "assets/fonts/NotoSans-Regular.ttf";
+  var JSPDF_SRC =
+    "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
   var jsPdfPromise = null;
   var fontPromise = null;
   var fontBase64 = null;
+  var fontRegistered = false;
+
+  function getJsPdfConstructor() {
+    if (global.jspdf && global.jspdf.jsPDF) return global.jspdf.jsPDF;
+    if (global.jsPDF) return global.jsPDF;
+    return null;
+  }
 
   function arrayBufferToBase64(buffer) {
     var bytes = new Uint8Array(buffer);
@@ -38,13 +46,16 @@
 
   function loadScript(src) {
     return new Promise(function (resolve, reject) {
-      if (document.querySelector('script[src="' + src + '"]')) {
-        resolve();
+      var existing = document.querySelector('script[src="' + src + '"]');
+      if (existing) {
+        waitForJsPdf().then(resolve).catch(reject);
         return;
       }
       var script = document.createElement("script");
       script.src = src;
-      script.onload = resolve;
+      script.onload = function () {
+        waitForJsPdf().then(resolve).catch(reject);
+      };
       script.onerror = function () {
         reject(new Error("PDF library failed to load"));
       };
@@ -52,35 +63,71 @@
     });
   }
 
-  function loadJsPdf() {
-    if (jsPdfPromise) return jsPdfPromise;
-    jsPdfPromise = loadScript(
-      "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
-    ).then(function () {
-      if (!global.jspdf?.jsPDF) throw new Error("PDF library failed to load");
+  function waitForJsPdf() {
+    return new Promise(function (resolve, reject) {
+      var attempts = 0;
+      function check() {
+        if (getJsPdfConstructor()) {
+          resolve();
+          return;
+        }
+        attempts += 1;
+        if (attempts > 40) {
+          reject(new Error("PDF library failed to load"));
+          return;
+        }
+        setTimeout(check, 50);
+      }
+      check();
     });
+  }
+
+  function loadJsPdf() {
+    if (!jsPdfPromise) {
+      jsPdfPromise = loadScript(JSPDF_SRC);
+    }
     return jsPdfPromise;
   }
 
+  function resolveFontUrl() {
+    try {
+      return new URL(FONT_PATH, document.baseURI || window.location.href).href;
+    } catch (_e) {
+      return FONT_PATH;
+    }
+  }
+
   function loadFontData() {
+    if (fontBase64) return Promise.resolve();
     if (fontPromise) return fontPromise;
-    fontPromise = fetch(FONT_URL)
+
+    fontPromise = fetch(resolveFontUrl())
       .then(function (res) {
-        if (!res.ok) throw new Error("CV font failed to load");
+        if (!res.ok) throw new Error("CV font failed to load (" + res.status + ")");
         return res.arrayBuffer();
       })
       .then(function (buf) {
         fontBase64 = arrayBufferToBase64(buf);
+      })
+      .catch(function (err) {
+        fontPromise = null;
+        throw err;
       });
+
     return fontPromise;
   }
 
   function applyFont(pdf) {
-    if (!pdf.getFontList().NotoSans) {
+    if (fontBase64 && !fontRegistered) {
       pdf.addFileToVFS("NotoSans-Regular.ttf", fontBase64);
       pdf.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
+      fontRegistered = true;
     }
-    pdf.setFont("NotoSans", "normal");
+    if (fontRegistered) {
+      pdf.setFont("NotoSans", "normal");
+    } else {
+      pdf.setFont("helvetica", "normal");
+    }
   }
 
   /**
@@ -91,7 +138,10 @@
     await loadJsPdf();
     await loadFontData();
 
-    var pdf = new global.jspdf.jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+    var JsPDF = getJsPdfConstructor();
+    if (!JsPDF) throw new Error("PDF library failed to load");
+
+    var pdf = new JsPDF({ orientation: "p", unit: "mm", format: "a4" });
     applyFont(pdf);
 
     var margin = 14;
@@ -112,6 +162,7 @@
     function writeBlock(text, fontSize, lineHeight, indent) {
       if (!text) return;
       indent = indent || 0;
+      applyFont(pdf);
       pdf.setFontSize(fontSize);
       var lines = pdf.splitTextToSize(String(text), contentWidth - indent);
       ensureSpace(lines.length * lineHeight);
@@ -121,6 +172,7 @@
 
     function sectionTitle(title) {
       ensureSpace(10);
+      applyFont(pdf);
       pdf.setFontSize(10);
       pdf.text(String(title).toUpperCase(), margin, y);
       y += 2;

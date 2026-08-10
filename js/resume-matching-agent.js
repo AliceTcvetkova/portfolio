@@ -259,9 +259,13 @@
   });
 
   async function saveCvAsPdf() {
-    if (!lastCvData || !lastCvData.cv || !saveCvBtn) return;
+    if (!saveCvBtn) return;
+    if (!lastCvData || !lastCvData.cv) {
+      setStatus("Generate a CV first, then save as PDF.", "error");
+      return;
+    }
     if (typeof window.saveCvPdfFile !== "function") {
-      setStatus("PDF module not loaded.", "error");
+      setStatus("PDF module not loaded — refresh the page.", "error");
       return;
     }
 
