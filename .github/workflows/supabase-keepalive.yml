@@ -1,0 +1,27 @@
+name: Supabase keepalive
+
+on:
+  schedule:
+    # Every 3 days at 06:00 UTC — keeps the free-tier project under the 7-day inactivity limit
+    - cron: "0 6 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping Supabase database
+        run: |
+          response="$(curl -sS -w "\n%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/tasks?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")"
+          http_code="${response##*$'\n'}"
+          body="${response%$'\n'*}"
+          echo "HTTP $http_code"
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "$body"
+            exit 1
+          fi
+          echo "Supabase keepalive OK"
