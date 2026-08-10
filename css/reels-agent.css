@@ -185,3 +185,39 @@
 .reels-agent__pipeline li {
   margin-bottom: 0.35rem;
 }
+
+.reels-agent__lede {
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 42rem;
+}
+
+.reels-agent__section-intro {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  margin: -0.25rem 0 0;
+}
+
+.reels-agent__bullets {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+.reels-agent__bullets li {
+  margin-bottom: 0.4rem;
+}
+
+.reels-agent__bullets--compact {
+  margin-top: 1rem;
+}
+
+.reels-agent__decisions {
+  margin-top: 0.5rem;
+}
+
+.reels-agent__decisions .reels-agent__layer h3 {
+  font-size: 0.9375rem;
+}
