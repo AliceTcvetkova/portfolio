@@ -216,7 +216,14 @@
         skills: "Product Management · Delivery · SQL · Agile · CustDev · Roadmaps",
         education: ["University of Cape Town — Marketing, 2019", "SUM Moscow — Financial Management, 2015"],
         certifications: ["META — Marketing Analytics, 2022"],
-        languages: "Russian — Native · English — C1 · German — B1 · French — B1"
+        languages: "Russian — Native · English — C1 · German — B1 · French — B1",
+        game_development_projects: gaming
+          ? [
+              "Defined core gameplay loop and meta-progression system",
+              "Designed player progression and world progression systems",
+              "Analyzed retention mechanics of desktop/cozy/sandbox games"
+            ]
+          : undefined
       }
     };
   }

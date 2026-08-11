@@ -24,6 +24,8 @@ type Knowledge = {
   recruiter_rules: string;
   portfolio_sync?: string;
   market_positioning?: string;
+  gamedev_positioning?: string;
+  game_development_projects?: string;
   languages?: string;
   projects: { id: string; content: string }[];
 };
@@ -187,6 +189,12 @@ function compactProjectSummary(content: string, maxLen = 280): string {
   return compactText(stripFrontmatter(content), maxLen);
 }
 
+function isGamedevVacancy(text: string): boolean {
+  return /game|gaming|gamedev|game dev|gameplay|game producer|game project|unity|unreal|studio|level design|liveops/i.test(
+    text,
+  );
+}
+
 /** Keep analyze prompt under Groq free-tier TPM (~6k tokens incl. completion). */
 function buildAnalyzeUserPrompt(
   knowledge: Knowledge,
@@ -195,8 +203,8 @@ function buildAnalyzeUserPrompt(
 ): string {
   const limits =
     scale === "compact"
-      ? { vacancy: 2200, profile: 800, projects: 1800, projectEach: 180 }
-      : { vacancy: 3500, profile: 1200, projects: 2800, projectEach: 280 };
+      ? { vacancy: 2200, profile: 800, projects: 1800, projectEach: 180, gamedev: 600 }
+      : { vacancy: 3500, profile: 1200, projects: 2800, projectEach: 280, gamedev: 900 };
 
   const vacancy = compactText(vacancyText, limits.vacancy);
   const profile = compactText(stripFrontmatter(knowledge.profile), limits.profile);
@@ -205,12 +213,20 @@ function buildAnalyzeUserPrompt(
     .join("\n\n")
     .slice(0, limits.projects);
 
-  return `## Vacancy\n${vacancy}\n\n## Profile\n${profile}\n\n## Projects (summaries)\n${projects}`;
+  let prompt =
+    `## Vacancy\n${vacancy}\n\n## Profile\n${profile}\n\n## Projects (summaries)\n${projects}`;
+
+  if (isGamedevVacancy(vacancyText) && knowledge.gamedev_positioning) {
+    prompt += `\n\n## Gamedev positioning\n${compactText(knowledge.gamedev_positioning, limits.gamedev)}`;
+  }
+
+  return prompt;
 }
 
 /** One LLM call for analyze — keep prompt small for Groq free TPM (6k). */
 const ANALYZE_SYSTEM = `Match a job vacancy to the candidate using ONLY the provided profile and project summaries.
 Never invent experience. case_study projects (locus_chamber, eco_clean_map) are educational demos, not employment years.
+For game dev / Game Producer vacancies: emphasize production PM transfer (pipeline, dependencies, risk, scope, cross-functional delivery). Do NOT claim commercial game-studio employment years. Personal game projects go in game_development_projects — not as jobs.
 Candidate languages: RU native; EN C1 (not C2); DE/FR B1; FI/AF elementary. Flag language_gaps only when vacancy explicitly requires a language.
 Return JSON only:
 {
@@ -231,6 +247,14 @@ const CV_SYSTEM = `You tailor a CV using ONLY facts from the provided base CV. R
 Keep EN CV ~1 page (4-5 roles max, 3-5 bullets on recent role). RU CV ~2 pages max.
 ATS-safe single column content.
 
+For game development / Game Producer / production PM in games vacancies:
+- Headline: "Game Producer / Project Manager" OR "Product & Delivery Manager transitioning into game development"
+- Summary: 10+ years complex digital products + cross-functional teams + recent game dev/design/production focus; optional game dev focus line (desktop games, core loops, retention, player progression)
+- Reframe Ozon/IRPO/VK bullets with production language (pipeline, dependencies, risk, scope, concept→release) using gamedev_positioning hints
+- Erich Krause: max ~2 bullets — product ownership, international launch, analytics, portfolio, customer understanding
+- Add game_development_projects section at bottom (personal, NOT employment) when gamedev positioning is provided
+- NEVER invent game studio employment or shipped commercial titles
+
 Include in contact_line or summary footer:
 Portfolio: https://alicetcvetkova.github.io/portfolio/
 LinkedIn: https://www.linkedin.com/in/alice-tsvetkova
@@ -242,6 +266,7 @@ Return JSON only (no markdown):
   "contact_line": string,
   "summary": string,
   "experience": [{"role": string, "company": string, "dates": string, "bullets": string[]}],
+  "game_development_projects": string[],
   "skills": string,
   "education": string[],
   "certifications": string[],
@@ -316,7 +341,11 @@ Deno.serve(async (req) => {
       : "Write CV content in English.";
 
     const cvUserPrompt =
-      `## Variant\n${langNote}\n\n## Vacancy\n${vacancySlice.slice(0, 4000)}\n\n## Base CV (adapt — do not add roles not listed here)\n${baseCv}\n\n## Tailoring hints\n${(knowledge.portfolio_sync || "").slice(0, 800)}`;
+      `## Variant\n${langNote}\n\n## Vacancy\n${vacancySlice.slice(0, 4000)}\n\n## Base CV (adapt — do not add roles not listed here)\n${baseCv}\n\n## Tailoring hints\n${(knowledge.portfolio_sync || "").slice(0, 800)}${
+        isGamedevVacancy(vacancySlice)
+          ? `\n\n## Gamedev positioning\n${(knowledge.gamedev_positioning || "").slice(0, 2200)}\n\n## Game development projects (personal section)\n${(knowledge.game_development_projects || "").slice(0, 1000)}`
+          : ""
+      }`;
 
     type CvPayload = {
       full_name?: string;
@@ -324,6 +353,7 @@ Deno.serve(async (req) => {
       contact_line?: string;
       summary?: string;
       experience?: Array<{ role?: string; company?: string; dates?: string; bullets?: string[] }>;
+      game_development_projects?: string[];
       skills?: string;
       education?: string[];
       certifications?: string[];

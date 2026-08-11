@@ -5,6 +5,7 @@
     international: {
       summary: "About Me",
       experience: "Work Experience",
+      game_projects: "Game Development Projects",
       skills: "Skills",
       education: "Education",
       certifications: "Certifications",
@@ -13,6 +14,7 @@
     russia: {
       summary: "О себе",
       experience: "Опыт работы",
+      game_projects: "Проекты в game development",
       skills: "Навыки",
       education: "Образование",
       certifications: "Курсы и сертификации",
@@ -123,6 +125,10 @@
     }
 
     html += section(labels.experience, renderExperience(cv.experience));
+
+    if (cv.game_development_projects && cv.game_development_projects.length) {
+      html += section(labels.game_projects, renderList(cv.game_development_projects));
+    }
 
     if (cv.skills) {
       html += section(

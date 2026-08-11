@@ -5,6 +5,7 @@
     international: {
       summary: "About Me",
       experience: "Work Experience",
+      game_projects: "Game Development Projects",
       skills: "Skills",
       education: "Education",
       certifications: "Certifications",
@@ -13,6 +14,7 @@
     russia: {
       summary: "О себе",
       experience: "Опыт работы",
+      game_projects: "Проекты в game development",
       skills: "Навыки",
       education: "Образование",
       certifications: "Курсы и сертификации",
@@ -213,6 +215,14 @@
         });
         y += 2;
       });
+    }
+
+    if (cv.game_development_projects && cv.game_development_projects.length) {
+      sectionTitle(labels.game_projects);
+      cv.game_development_projects.forEach(function (item) {
+        writeBlock("• " + item, 10, 4.5, 3);
+      });
+      y += 2;
     }
 
     if (cv.skills) {
