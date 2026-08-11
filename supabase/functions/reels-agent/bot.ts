@@ -66,33 +66,33 @@ const RESOURCE_RULES: [string[], string, string, string, "gain" | "spend"][] = [
 ];
 
 const SHOOT_SKILLS = [
-  { title: "Phone + tripod", tip: "iPhone 15 Pro on tripod; lock orientation.", course: "Sundance · LearnWorlds" },
-  { title: "Framing", tip: "Rule of thirds — subject on a third line.", course: "LearnWorlds" },
-  { title: "Wide / medium / close", tip: "Wide → medium → close on one quest.", course: "LearnWorlds" },
-  { title: "Filming a person", tip: "Medium shot, window light.", course: "LearnWorlds" },
-  { title: "Self-filming", tip: "Tripod + headroom for 9:16 crop.", course: "Sundance" },
-  { title: "B-roll", tip: "5–10 sec details: hands, texture.", course: "Sundance" },
-  { title: "Camera movement", tip: "Slow pan on tripod.", course: "Sundance" },
-  { title: "Window light", tip: "Subject at 45° to window.", course: "LearnWorlds" },
-  { title: "Artificial light", tip: "Fill light opposite the window.", course: "LearnWorlds" },
-  { title: "Sound + headset mic", tip: "10 sec VO in a quiet room.", course: "LearnWorlds" },
-  { title: "Exposure / WB", tip: "Lock exposure on paper/face.", course: "LearnWorlds" },
-  { title: "Stability", tip: "30fps + tripod, slow moves.", course: "Sundance" },
+  { title: "Phone + tripod", tip: "iPhone 15 Pro on tripod; lock orientation." },
+  { title: "Framing", tip: "Rule of thirds — subject on a third line." },
+  { title: "Wide / medium / close", tip: "Wide → medium → close on one quest." },
+  { title: "Filming a person", tip: "Medium shot, window light." },
+  { title: "Self-filming", tip: "Tripod + headroom for 9:16 crop." },
+  { title: "B-roll", tip: "5–10 sec details: hands, texture." },
+  { title: "Camera movement", tip: "Slow pan on tripod." },
+  { title: "Window light", tip: "Subject at 45° to window." },
+  { title: "Artificial light", tip: "Fill light opposite the window." },
+  { title: "Sound + headset mic", tip: "10 sec VO in a quiet room." },
+  { title: "Exposure / WB", tip: "Lock exposure on paper/face." },
+  { title: "Stability", tip: "30fps + tripod, slow moves." },
 ];
 
 const EDIT_SKILLS = [
-  { title: "Organize footage", tip: "iMovie: lay out by storyboard scene before cutting.", course: "LearnWorlds" },
-  { title: "Pick takes", tip: "2–3 takes per scene.", course: "LearnWorlds" },
-  { title: "Pacing + cuts", tip: "Cut every 2–3 sec.", course: "LearnWorlds" },
-  { title: "Rhythm", tip: "Fast hook → slower recap.", course: "LearnWorlds" },
-  { title: "J-cut / L-cut", tip: "Audio from next scene before the cut.", course: "LearnWorlds" },
-  { title: "B-roll over A-roll", tip: "Resource pop overlay.", course: "LearnWorlds · Sundance" },
-  { title: "Music + SFX", tip: "SFX in iMovie; music in Instagram.", course: "LearnWorlds" },
-  { title: "On-screen text", tip: "Max 6 words, ≥1.5 sec on screen.", course: "LearnWorlds" },
-  { title: "Color correction", tip: "Warmth + contrast in iMovie.", course: "LearnWorlds" },
-  { title: "Color grading", tip: "One cozy preset for the whole Reel.", course: "LearnWorlds" },
-  { title: "Voice track", tip: "VO lane, trim pauses.", course: "LearnWorlds" },
-  { title: "Export 9:16", tip: "1080×1920, text safe zone.", course: "LearnWorlds" },
+  { title: "Organize footage", tip: "iMovie: lay out by storyboard scene before cutting." },
+  { title: "Pick takes", tip: "2–3 takes per scene." },
+  { title: "Pacing + cuts", tip: "Cut every 2–3 sec." },
+  { title: "Rhythm", tip: "Fast hook → slower recap." },
+  { title: "J-cut / L-cut", tip: "Audio from next scene before the cut." },
+  { title: "B-roll over A-roll", tip: "Resource pop overlay." },
+  { title: "Music + SFX", tip: "SFX in iMovie; music in Instagram." },
+  { title: "On-screen text", tip: "Max 6 words, ≥1.5 sec on screen." },
+  { title: "Color correction", tip: "Warmth + contrast in iMovie." },
+  { title: "Color grading", tip: "One cozy preset for the whole Reel." },
+  { title: "Voice track", tip: "VO lane, trim pauses." },
+  { title: "Export 9:16", tip: "1080×1920, text safe zone." },
 ];
 
 function parseQuestLines(text: string): string[] {
@@ -148,7 +148,6 @@ function pickVideoLearning(quests: string[], session: Session, advance = true) {
     focus_shoot_tip: shoot.tip,
     focus_edit: edit.title,
     focus_edit_tip: edit.tip,
-    course_note: `${shoot.course} · ${edit.course}`,
     practice: [
       `Shoot: ${shoot.tip}`,
       `Edit: ${edit.tip}`,
@@ -157,6 +156,37 @@ function pickVideoLearning(quests: string[], session: Session, advance = true) {
     after_reel: `Did «${shoot.title}» + «${edit.title}» work? yes / retry`,
     next_shoot: SHOOT_SKILLS[(shoot_i + 1) % SHOOT_SKILLS.length].title,
     next_edit: EDIT_SKILLS[(edit_i + 1) % EDIT_SKILLS.length].title,
+  };
+}
+
+function buildPublishPack(quests: string[], fogTease = "") {
+  const n = quests.length;
+  const hint = quests[0]?.slice(0, 35) ?? "today's session";
+  const fog = fogTease || "Mug still locked until I find work";
+  return {
+    hook_pick:
+      "Open on quest list or sketchbook snap + «Level 33 · session» — VO: Level 33 — playing my life again today.",
+    hook_alternatives: [
+      `Resource angle: tie hook to «${hint}» + first resource pop`,
+      `List tease: «${n} quests → 1 Reels» + quick scroll through planner`,
+    ],
+    cover_suggestion: "Scene 1 — quest list or face + sketchbook, warm light, text readable small",
+    caption_first_line: `Level 33 — I turned today's list into a game session (${n} quests).`,
+    caption:
+      `Level 33 — I turned today's list into a game session (${n} quests).\n\n` +
+      "Real quests, real resources — gain and spend, not a generic productivity reel.\n" +
+      `${fog}.\n\nSave if you gamify your creative week too.`,
+    hashtags: [
+      "#sashaiamdrawing", "#sashaiamdrawingreport", "#birdsinmyforest", "#level33",
+      "#artprocess", "#sketchbook", "#cozyart", "#slowliving", "#illustrationprocess", "#gamifiedlife",
+    ],
+    hashtag_note: "3 branded + niche art/process + series tags — rotate 2–3 niche tags vs last post",
+    bonus_tips: [
+      "Pin a comment: one-line explainer of the 5 resources",
+      "Caption first line must match on-screen hook in first 2 sec",
+      "Ask which quest they'd pick first — genuine comment prompt",
+      "Alt text: Level 33 game session quest list drawing process",
+    ],
   };
 }
 
@@ -256,7 +286,8 @@ function buildTemplateStoryboard(quests: string[], xp_goal: number, session: Ses
     projected_xp: resources_gained.length * 15,
     resources_gained, fog_tease: "Mug 🔒 — unlocks after I land a job",
     agent_notes: "Song cover: needs 150 Inspiration + 200 Experience + 200 Energy → +50 Reputation.",
-    video_learning, scenes, _mode: "template",
+    video_learning, publish: buildPublishPack(quests, "Mug 🔒 — unlocks after I land a job"),
+    scenes, _mode: "template",
   };
 }
 
@@ -273,12 +304,15 @@ async function generateStoryboard(session: Session) {
     if (last_storyboard?.scenes) {
       userMsg += `\nPrevious scenes: ${JSON.stringify((last_storyboard.scenes as unknown[]).slice(0, 4))}\n`;
     }
-    userMsg += `\nReturn JSON: total_seconds, player_level, resources_gained[], fog_tease, scenes[] (each scene MUST include my_thought — one first-person VO sentence + VO time in edit_note), agent_notes, video_learning{}.`;
+    userMsg += `\nReturn JSON: total_seconds, player_level, resources_gained[], fog_tease, scenes[] (each scene MUST include my_thought), agent_notes, video_learning{focus_shoot, focus_shoot_tip, focus_edit, focus_edit_tip, practice[], after_reel}, publish{hook_pick, hook_alternatives[], cover_suggestion, caption_first_line, caption, hashtags[], hashtag_note, bonus_tips[]} — video assignments only, NO course or platform names. publish required per publish_marketing.md.`;
 
     const raw = await chatGroq(kb.system_prompt, userMsg);
     const data = extractJson(raw) as Record<string, unknown>;
     data._mode = "llm";
     data.video_learning = pickVideoLearning(quests, session, true);
+    if (!data.publish) {
+      data.publish = buildPublishPack(quests, String(data.fog_tease ?? ""));
+    }
     if (!data.scenes) throw new Error("No scenes");
     return data;
   } catch (e) {
@@ -315,13 +349,12 @@ function formatStoryboard(data: Record<string, unknown>): string {
   const vl = data.video_learning as Record<string, unknown> | undefined;
   if (vl) {
     lines.push(
-      "📚 <b>Learn on this Reels</b>",
+      "📚 <b>Practice on this Reels</b>",
       `<b>Shoot:</b> ${vl.focus_shoot}`,
       `   ${vl.focus_shoot_tip}`,
       `<b>Edit:</b> ${vl.focus_edit}`,
       `   ${vl.focus_edit_tip}`,
     );
-    if (vl.course_note) lines.push(`<i>Courses: ${vl.course_note}</i>`);
     for (const p of (vl.practice as string[]) ?? []) lines.push(`• ${p}`);
     if (vl.after_reel) lines.push(`✅ ${vl.after_reel}`);
     lines.push("");
@@ -336,6 +369,21 @@ function formatStoryboard(data: Record<string, unknown>): string {
     lines.push("");
   }
   if (data.fog_tease) lines.push(`🌫 <b>Fog of war:</b> ${data.fog_tease}`, "");
+
+  const pub = data.publish as Record<string, unknown> | undefined;
+  if (pub) {
+    lines.push("📣 <b>Hook & publish</b>");
+    if (pub.hook_pick) lines.push(`<b>Hook:</b> ${pub.hook_pick}`);
+    for (const alt of (pub.hook_alternatives as string[]) ?? []) lines.push(`   ↳ ${alt}`);
+    if (pub.cover_suggestion) lines.push(`<b>Cover:</b> ${pub.cover_suggestion}`);
+    if (pub.caption_first_line) lines.push(`<b>Caption line 1:</b> «${pub.caption_first_line}»`);
+    if (pub.caption) lines.push(`<b>Caption:</b>\n${pub.caption}`);
+    const tags = (pub.hashtags as string[]) ?? [];
+    if (tags.length) lines.push(`<b>Hashtags:</b> ${tags.join(" ")}`);
+    if (pub.hashtag_note) lines.push(`   <i>${pub.hashtag_note}</i>`);
+    for (const tip of (pub.bonus_tips as string[]) ?? []) lines.push(`💡 ${tip}`);
+    lines.push("");
+  }
 
   lines.push("<b>Storyboard</b>");
   for (const [i, scene] of ((data.scenes as Record<string, string>[]) ?? []).entries()) {
