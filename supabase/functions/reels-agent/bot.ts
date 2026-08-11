@@ -38,59 +38,61 @@ type Knowledge = {
 
 let knowledgeCache: { data: Knowledge; at: number } | null = null;
 
-const WELCOME = `Привет! Я <b>Reels Agent</b> для @sashaiamdrawing 🎬
+const OUTPUT_LANGUAGE = Deno.env.get("OUTPUT_LANGUAGE") ?? "en";
 
-Level 33 · жизнь как open-world игра.
+const WELCOME = `Hi! I'm <b>Reels Agent</b> for @sashaiamdrawing 🎬
 
-<b>Команды:</b>
-/today — квесты на сегодня
-/storyboard — сценарий + обучение съёмке/монтажу
-/add — добавить дела и переписать
-/rewrite — переписать сценарий
-/status — текущие квесты`;
+Level 33 · life as an open-world game.
+
+<b>Commands:</b>
+/today — today's quests
+/storyboard — storyboard + shoot/edit skill
+/add — add tasks and regenerate
+/rewrite — revise the storyboard
+/status — current quests`;
 
 const RESOURCE_RULES: [string[], string, string, string, "gain" | "spend"][] = [
-  [["кино", "фильм", "семей", "movie"], "Вдохновение", "+15", "gem-shimmer.gif", "gain"],
-  [["отклик", "вакан", "поиск работ", "резюме"], "Опыт", "+15", "sticker_work.png", "gain"],
-  [["собес", "interview"], "Опыт", "+30", "sticker_work.png", "gain"],
-  [["игр", "прототип", "gamedev"], "Опыт", "−25", "sticker_new_experience_gained.png", "spend"],
-  [["рис", "draw", "sketch", "paint"], "Вдохновение", "−20", "sticker_materials.png", "spend"],
-  [["рукод", "craft", "handmade"], "Вдохновение", "−15", "sticker_materials.png", "spend"],
-  [["убор", "быт", "дом", "clean"], "Энергия", "−10", "sticker_energy.png", "spend"],
-  [["полить", "растен", "цвет", "plant"], "Энергия", "−8", "sticker_plants.png", "spend"],
-  [["живот", "кот", "собак", "pet"], "Энергия", "−10", "sticker_dog.png", "spend"],
-  [["облож", "песн"], "Вдохновение", "−20", "sticker_reputation.png", "spend"],
-  [["публик", "reels", "post"], "Репутация", "+25", "sticker_reputation.png", "gain"],
+  [["кино", "фильм", "семей", "movie", "cinema"], "Inspiration", "+15", "gem-shimmer.gif", "gain"],
+  [["отклик", "вакан", "job", "resume", "резюме"], "Experience", "+15", "sticker_work.png", "gain"],
+  [["собес", "interview"], "Experience", "+30", "sticker_work.png", "gain"],
+  [["игр", "прототип", "gamedev", "game dev"], "Experience", "−25", "sticker_new_experience_gained.png", "spend"],
+  [["рис", "draw", "sketch", "paint"], "Inspiration", "−20", "sticker_materials.png", "spend"],
+  [["рукод", "craft", "handmade"], "Inspiration", "−15", "sticker_materials.png", "spend"],
+  [["убор", "быт", "дом", "clean"], "Energy", "−10", "sticker_energy.png", "spend"],
+  [["полить", "растен", "цвет", "plant", "water"], "Energy", "−8", "sticker_plants.png", "spend"],
+  [["живот", "кот", "собак", "pet", "cat", "dog"], "Energy", "−10", "sticker_dog.png", "spend"],
+  [["облож", "cover", "песн", "song"], "Inspiration", "−20", "sticker_reputation.png", "spend"],
+  [["публик", "reels", "post"], "Reputation", "+25", "sticker_reputation.png", "gain"],
 ];
 
 const SHOOT_SKILLS = [
-  { title: "Телефон + штатив", tip: "iPhone 15 Pro на штатив, блокируй ориентацию.", course: "Sundance · LearnWorlds" },
-  { title: "Кадрирование", tip: "Правило третей — объект на линии трети.", course: "LearnWorlds" },
-  { title: "Общий / средний / крупный", tip: "Wide → medium → close на один квест.", course: "LearnWorlds" },
-  { title: "Съёмка человека", tip: "Средний план, свет из окна.", course: "LearnWorlds" },
-  { title: "Съёмка себя одной", tip: "Штатив + запас для crop 9:16.", course: "Sundance" },
-  { title: "B-roll", tip: "5–10 сек деталей: руки, текстура.", course: "Sundance" },
-  { title: "Движение камеры", tip: "Slow pan на штативе.", course: "Sundance" },
-  { title: "Свет из окна", tip: "Объект под 45° к окну.", course: "LearnWorlds" },
-  { title: "Искусственный свет", tip: "Fill-свет противоположно окну.", course: "LearnWorlds" },
-  { title: "Звук + гарнитура", tip: "10 сек VO в тихой комнате.", course: "LearnWorlds" },
-  { title: "Экспозиция / WB", tip: "Lock exposure на лист/лицо.", course: "LearnWorlds" },
-  { title: "Стабильность", tip: "30fps + штатив, медленные движения.", course: "Sundance" },
+  { title: "Phone + tripod", tip: "iPhone 15 Pro on tripod; lock orientation.", course: "Sundance · LearnWorlds" },
+  { title: "Framing", tip: "Rule of thirds — subject on a third line.", course: "LearnWorlds" },
+  { title: "Wide / medium / close", tip: "Wide → medium → close on one quest.", course: "LearnWorlds" },
+  { title: "Filming a person", tip: "Medium shot, window light.", course: "LearnWorlds" },
+  { title: "Self-filming", tip: "Tripod + headroom for 9:16 crop.", course: "Sundance" },
+  { title: "B-roll", tip: "5–10 sec details: hands, texture.", course: "Sundance" },
+  { title: "Camera movement", tip: "Slow pan on tripod.", course: "Sundance" },
+  { title: "Window light", tip: "Subject at 45° to window.", course: "LearnWorlds" },
+  { title: "Artificial light", tip: "Fill light opposite the window.", course: "LearnWorlds" },
+  { title: "Sound + headset mic", tip: "10 sec VO in a quiet room.", course: "LearnWorlds" },
+  { title: "Exposure / WB", tip: "Lock exposure on paper/face.", course: "LearnWorlds" },
+  { title: "Stability", tip: "30fps + tripod, slow moves.", course: "Sundance" },
 ];
 
 const EDIT_SKILLS = [
-  { title: "Организация материала", tip: "iMovie: разложи по сценам до cut.", course: "LearnWorlds" },
-  { title: "Выбор дублей", tip: "2–3 дубля на сцену.", course: "LearnWorlds" },
-  { title: "Склейка + темп", tip: "Cut каждые 2–3 сек.", course: "LearnWorlds" },
-  { title: "Темп и ритм", tip: "Hook быстрый → recap медленнее.", course: "LearnWorlds" },
-  { title: "J-cut / L-cut", tip: "Звук следующей сцены раньше cut.", course: "LearnWorlds" },
-  { title: "B-roll поверх A-roll", tip: "Pop ресурса overlay.", course: "LearnWorlds · Sundance" },
-  { title: "Музыка + SFX", tip: "SFX в iMovie, музыка в Instagram.", course: "LearnWorlds" },
-  { title: "Текст на экране", tip: "Max 6 слов, ≥1.5 сек.", course: "LearnWorlds" },
-  { title: "Color correction", tip: "Warmth + contrast в iMovie.", course: "LearnWorlds" },
-  { title: "Color grading", tip: "Один cozy preset на весь ролик.", course: "LearnWorlds" },
-  { title: "Работа с голосом", tip: "VO дорожка, обрежь паузы.", course: "LearnWorlds" },
-  { title: "Export 9:16", tip: "1080×1920, safe zone для текста.", course: "LearnWorlds" },
+  { title: "Organize footage", tip: "iMovie: lay out by storyboard scene before cutting.", course: "LearnWorlds" },
+  { title: "Pick takes", tip: "2–3 takes per scene.", course: "LearnWorlds" },
+  { title: "Pacing + cuts", tip: "Cut every 2–3 sec.", course: "LearnWorlds" },
+  { title: "Rhythm", tip: "Fast hook → slower recap.", course: "LearnWorlds" },
+  { title: "J-cut / L-cut", tip: "Audio from next scene before the cut.", course: "LearnWorlds" },
+  { title: "B-roll over A-roll", tip: "Resource pop overlay.", course: "LearnWorlds · Sundance" },
+  { title: "Music + SFX", tip: "SFX in iMovie; music in Instagram.", course: "LearnWorlds" },
+  { title: "On-screen text", tip: "Max 6 words, ≥1.5 sec on screen.", course: "LearnWorlds" },
+  { title: "Color correction", tip: "Warmth + contrast in iMovie.", course: "LearnWorlds" },
+  { title: "Color grading", tip: "One cozy preset for the whole Reel.", course: "LearnWorlds" },
+  { title: "Voice track", tip: "VO lane, trim pauses.", course: "LearnWorlds" },
+  { title: "Export 9:16", tip: "1080×1920, text safe zone.", course: "LearnWorlds" },
 ];
 
 function parseQuestLines(text: string): string[] {
@@ -116,7 +118,7 @@ function guessResource(quest: string) {
       return { resource, amount, sticker, flow };
     }
   }
-  return { resource: "Энергия", amount: "−5", sticker: "sticker_energy.png", flow: "spend" as const };
+  return { resource: "Energy", amount: "−5", sticker: "sticker_energy.png", flow: "spend" as const };
 }
 
 function questBonus(quests: string[]) {
@@ -148,11 +150,11 @@ function pickVideoLearning(quests: string[], session: Session, advance = true) {
     focus_edit_tip: edit.tip,
     course_note: `${shoot.course} · ${edit.course}`,
     practice: [
-      `Съёмка: ${shoot.tip}`,
-      `Монтаж: ${edit.tip}`,
-      quests[0] ? `Примени в сценах с: «${quests[0].slice(0, 40)}»` : "",
+      `Shoot: ${shoot.tip}`,
+      `Edit: ${edit.tip}`,
+      quests[0] ? `Apply in scenes with: «${quests[0].slice(0, 40)}»` : "",
     ].filter(Boolean),
-    after_reel: `Получилось «${shoot.title}» + «${edit.title}»? да / повторить`,
+    after_reel: `Did «${shoot.title}» + «${edit.title}» work? yes / retry`,
     next_shoot: SHOOT_SKILLS[(shoot_i + 1) % SHOOT_SKILLS.length].title,
     next_edit: EDIT_SKILLS[(edit_i + 1) % EDIT_SKILLS.length].title,
   };
@@ -210,16 +212,16 @@ function buildTemplateStoryboard(quests: string[], xp_goal: number, session: Ses
 
   const scenes: Record<string, string>[] = [
     {
-      timecode: "0–2 sec", label: "Hook", on_screen_text: "Level 33 · сессия",
-      my_thought: "Level 33 — сегодня снова играю в свою жизнь.",
-      shot_description: "Sketchbook или список квестов",
-      edit_note: "iMovie: резкий cut · 1.5 сек VO", resource_awarded: "", sticker_suggestion: "quest-shimmer.gif",
+      timecode: "0–2 sec", label: "Hook",       on_screen_text: "Level 33 · session",
+      my_thought: "Level 33 — playing my life again today.",
+      shot_description: "Close-up of sketchbook or quest list",
+      edit_note: "iMovie: hard cut · 1.5 sec VO", resource_awarded: "", sticker_suggestion: "quest-shimmer.gif",
       learn_note: "",
     },
     {
-      timecode: "2–6 sec", label: "Quest list", on_screen_text: `${quests.length} квестов`,
-      my_thought: "Это не todo-list, а квесты на одну сессию.",
-      shot_description: "Scroll по списку дел", edit_note: "Max 6 слов · 2 сек VO", resource_awarded: "",
+      timecode: "2–6 sec", label: "Quest list",       on_screen_text: `${quests.length} quests`,
+      my_thought: "Not a todo list — quests for one session.",
+      shot_description: "Scroll through today's list", edit_note: "Max 6 words · 2 sec VO", resource_awarded: "",
       sticker_suggestion: "", learn_note: "",
     },
   ];
@@ -228,32 +230,32 @@ function buildTemplateStoryboard(quests: string[], xp_goal: number, session: Ses
   quests.slice(0, 4).forEach((quest, i) => {
     const [start, end] = blocks[i] ?? [26, 30];
     const { resource, amount, sticker, flow } = guessResource(quest);
-    const verb = flow === "gain" ? "получено" : "потрачено";
-    const thought = `Квест «${quest.slice(0, 25)}» — ${verb} ${resource}.`;
+    const verb = flow === "gain" ? "gained" : "spent";
+    const thought = `Quest "${quest.slice(0, 25)}" — ${verb} ${resource}.`;
     scenes.push({
       timecode: `${start}–${end} sec`, label: quest.slice(0, 30), on_screen_text: quest.slice(0, 40),
       my_thought: thought,
-      shot_description: `B-roll: ${quest}`, edit_note: "Cut 2–3 сек · 1.5 сек VO",
+      shot_description: `B-roll: ${quest}`, edit_note: "Cut 2–3 sec · 1.5 sec VO",
       resource_awarded: `${amount} ${resource} (${verb})`, sticker_suggestion: sticker, learn_note: "",
     });
   });
 
   scenes.push({
-    timecode: "28–35 sec", label: "Recap + fog", on_screen_text: "Кружка 🔒 до работы",
-    my_thought: "За туманом — кружка, когда найду работу.",
-    shot_description: "Баланс ресурсов + fog tease", edit_note: "SFX + музыка · 2 сек VO финал",
+    timecode: "28–35 sec", label: "Recap + fog", on_screen_text: "Mug 🔒 until job",
+    my_thought: "Behind the fog — the mug unlocks when I find work.",
+    shot_description: "Resource balance + fog tease", edit_note: "SFX + music · 2 sec VO outro",
     resource_awarded: "", sticker_suggestion: "sticker_new_quest_open.png", learn_note: "",
   });
 
   const video_learning = pickVideoLearning(quests, session, true);
-  if (scenes[0]) scenes[0].learn_note = `📚 Съёмка: ${video_learning.focus_shoot_tip}`;
-  if (scenes[1]) scenes[1].learn_note = `📚 Монтаж: ${video_learning.focus_edit_tip}`;
+  if (scenes[0]) scenes[0].learn_note = `📚 Shoot: ${video_learning.focus_shoot_tip}`;
+  if (scenes[1]) scenes[1].learn_note = `📚 Edit: ${video_learning.focus_edit_tip}`;
 
   return {
     total_seconds: 35, player_level: 33, daily_goal_xp: xp_goal,
     projected_xp: resources_gained.length * 15,
-    resources_gained, fog_tease: "Кружка 🔒 — только после работы",
-    agent_notes: "Обложка песни: 150 Вдохновения + 200 Опыта + 200 Энергии → +50 Репутации.",
+    resources_gained, fog_tease: "Mug 🔒 — unlocks after I land a job",
+    agent_notes: "Song cover: needs 150 Inspiration + 200 Experience + 200 Energy → +50 Reputation.",
     video_learning, scenes, _mode: "template",
   };
 }
@@ -266,7 +268,7 @@ async function generateStoryboard(session: Session) {
 
   try {
     const kb = await loadKnowledge();
-    let userMsg = `Knowledge base:\n${kb.knowledge_text}\n\n---\nToday's quests:\n${quests.map((q) => `- ${q}`).join("\n")}\nSession focus: ${xp_goal}\nOutput language: ru\n`;
+    let userMsg = `Knowledge base:\n${kb.knowledge_text}\n\n---\nToday's quests:\n${quests.map((q) => `- ${q}`).join("\n")}\nSession focus: ${xp_goal}\nOutput language for on_screen_text and my_thought: ${OUTPUT_LANGUAGE}\n`;
     if (revision_notes) userMsg += `\nUser revision:\n${revision_notes}\n`;
     if (last_storyboard?.scenes) {
       userMsg += `\nPrevious scenes: ${JSON.stringify((last_storyboard.scenes as unknown[]).slice(0, 4))}\n`;
@@ -313,13 +315,13 @@ function formatStoryboard(data: Record<string, unknown>): string {
   const vl = data.video_learning as Record<string, unknown> | undefined;
   if (vl) {
     lines.push(
-      "📚 <b>Учимся на этом Reels</b>",
-      `<b>Съёмка:</b> ${vl.focus_shoot}`,
+      "📚 <b>Learn on this Reels</b>",
+      `<b>Shoot:</b> ${vl.focus_shoot}`,
       `   ${vl.focus_shoot_tip}`,
-      `<b>Монтаж:</b> ${vl.focus_edit}`,
+      `<b>Edit:</b> ${vl.focus_edit}`,
       `   ${vl.focus_edit_tip}`,
     );
-    if (vl.course_note) lines.push(`<i>Курсы: ${vl.course_note}</i>`);
+    if (vl.course_note) lines.push(`<i>Courses: ${vl.course_note}</i>`);
     for (const p of (vl.practice as string[]) ?? []) lines.push(`• ${p}`);
     if (vl.after_reel) lines.push(`✅ ${vl.after_reel}`);
     lines.push("");
@@ -327,13 +329,13 @@ function formatStoryboard(data: Record<string, unknown>): string {
 
   const gained = (data.resources_gained as Record<string, string>[]) ?? [];
   if (gained.length) {
-    lines.push("<b>Ресурсы за сессию:</b>");
+    lines.push("<b>Session resources:</b>");
     for (const r of gained) {
       lines.push(`• ${r.amount} ${r.resource} ← ${r.from_quest}`);
     }
     lines.push("");
   }
-  if (data.fog_tease) lines.push(`🌫 <b>Туман войны:</b> ${data.fog_tease}`, "");
+  if (data.fog_tease) lines.push(`🌫 <b>Fog of war:</b> ${data.fog_tease}`, "");
 
   lines.push("<b>Storyboard</b>");
   for (const [i, scene] of ((data.scenes as Record<string, string>[]) ?? []).entries()) {
@@ -349,7 +351,7 @@ function formatStoryboard(data: Record<string, unknown>): string {
   }
   if (data.agent_notes) lines.push(`💡 ${data.agent_notes}`);
   if (data._mode === "fallback") {
-    lines.push("", "<i>⚠️ AI недоступен — упрощённый сценарий. /storyboard через минуту.</i>");
+    lines.push("", "<i>⚠️ AI unavailable — simplified storyboard. Try /storyboard in a minute.</i>");
   }
   return lines.join("\n").trim();
 }
@@ -407,13 +409,13 @@ async function saveSession(supabase: SupabaseClient, session: Session) {
 }
 
 async function runStoryboard(chatId: number, session: Session, supabase: SupabaseClient) {
-  await sendMessage(chatId, "⏳ Генерирую storyboard…");
+  await sendMessage(chatId, "⏳ Generating storyboard…");
   const data = await generateStoryboard(session);
   session.last_storyboard = data;
   session.revision_notes = "";
   await saveSession(supabase, session);
   await sendMessage(chatId, formatStoryboard(data));
-  await sendMessage(chatId, "✏️ /add — добавить · /rewrite — переписать");
+  await sendMessage(chatId, "✏️ /add — add tasks · /rewrite — revise");
 }
 
 export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseClient) {
@@ -425,7 +427,7 @@ export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseCli
     console.warn("Unauthorized chat:", chatId);
     await sendMessage(
       chatId,
-      `⛔ Доступ только для владельца.\n\nТвой chat_id: <code>${chatId}</code>\nДобавь его в Supabase → Secrets → <code>TELEGRAM_ALLOWED_CHAT_IDS</code> и напиши /start снова.`,
+      `⛔ Owner access only.\n\nYour chat_id: <code>${chatId}</code>\nAdd it to Supabase → Secrets → <code>TELEGRAM_ALLOWED_CHAT_IDS</code> and send /start again.`,
     );
     return;
   }
@@ -445,36 +447,36 @@ export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseCli
       session.awaiting_today = false;
       session.last_storyboard = null;
       await saveSession(supabase, session);
-      await sendMessage(chatId, `✅ ${session.quests.length} квестов.\n/storyboard — сценарий.`);
+      await sendMessage(chatId, `✅ ${session.quests.length} quests.\n/storyboard — generate plan.`);
       return;
     }
     session.awaiting_today = true;
     await saveSession(supabase, session);
-    await sendMessage(chatId, "Отправь список дел построчно ✔");
+    await sendMessage(chatId, "Send your quest list — one per line ✔");
     return;
   }
 
   if (text.startsWith("/goal")) {
     const n = parseInt(text.split(/\s+/)[1] ?? "", 10);
     if (!n) {
-      await sendMessage(chatId, `Фокус: ${session.xp_goal}. /goal 100`);
+      await sendMessage(chatId, `Focus: ${session.xp_goal}. /goal 100`);
       return;
     }
     session.xp_goal = n;
     await saveSession(supabase, session);
-    await sendMessage(chatId, `🎯 Фокус: <b>${n}</b>`);
+    await sendMessage(chatId, `🎯 Focus: <b>${n}</b>`);
     return;
   }
 
   if (text.startsWith("/status")) {
-    const list = session.quests.map((q) => `• ${q}`).join("\n") || "(пусто)";
-    await sendMessage(chatId, `<b>Квесты:</b>\n${list}\n\nФокус: ${session.xp_goal}`);
+    const list = session.quests.map((q) => `• ${q}`).join("\n") || "(empty)";
+    await sendMessage(chatId, `<b>Quests:</b>\n${list}\n\nFocus: ${session.xp_goal}`);
     return;
   }
 
   if (text.startsWith("/storyboard")) {
     if (!session.quests.length) {
-      await sendMessage(chatId, "Сначала /today");
+      await sendMessage(chatId, "Send /today first");
       return;
     }
     await runStoryboard(chatId, session, supabase);
@@ -486,19 +488,19 @@ export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseCli
     if (!rest) {
       session.awaiting_add = true;
       await saveSession(supabase, session);
-      await sendMessage(chatId, "Отправь дела для добавления.");
+      await sendMessage(chatId, "Send tasks to add.");
       return;
     }
     session.quests.push(...parseQuestLines(rest));
     await saveSession(supabase, session);
-    await sendMessage(chatId, `➕ Добавила. Всего ${session.quests.length}. Переписываю…`);
+    await sendMessage(chatId, `➕ Added. Total ${session.quests.length}. Regenerating…`);
     await runStoryboard(chatId, session, supabase);
     return;
   }
 
   if (text.startsWith("/rewrite")) {
     if (!session.quests.length) {
-      await sendMessage(chatId, "Сначала /today");
+      await sendMessage(chatId, "Send /today first");
       return;
     }
     session.revision_notes = text.replace(/^\/rewrite\s*/, "").trim();
@@ -519,6 +521,6 @@ export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseCli
     session.awaiting_today = false;
     session.last_storyboard = null;
     await saveSession(supabase, session);
-    await sendMessage(chatId, `✅ ${session.quests.length} квестов.\n/storyboard`);
+    await sendMessage(chatId, `✅ ${session.quests.length} quests.\n/storyboard`);
   }
 }
