@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { applyLanguageAdjustments, type AnalyzeResult } from "../_shared/language-match.ts";
+import { applyAnalyzeSanitization } from "../_shared/analyze-sanitize.ts";
 import { isVacancyUrl, resolveVacancyInput } from "../_shared/fetch-vacancy.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
@@ -226,7 +227,14 @@ function buildAnalyzeUserPrompt(
 /** One LLM call for analyze — keep prompt small for Groq free TPM (6k). */
 const ANALYZE_SYSTEM = `Match a job vacancy to the candidate using ONLY the provided profile and project summaries.
 Never invent experience. case_study projects (locus_chamber, eco_clean_map) are educational demos, not employment years.
-For game dev / Game Producer vacancies: emphasize production PM transfer (pipeline, dependencies, risk, scope, cross-functional delivery). Do NOT claim commercial game-studio employment years. Personal game projects go in game_development_projects — not as jobs.
+
+CRITICAL — highlights vs concerns:
+- highlights = ONLY candidate strengths WITH evidence (company name, metric, or "personal project/case study/transferable").
+- NEVER copy, paraphrase, or flip vacancy requirements into highlights (e.g. "proven live casual games", "strong game design", "game economy" are NOT highlights unless explicitly in profile as commercial work).
+- If JD requires live ops, game economy, shipped live casual games, deep game design — put in expected_concerns, NOT highlights.
+
+For game dev vacancies: emphasize production PM transfer (pipeline, dependencies, risk, scope, cross-functional delivery). Do NOT claim commercial game-studio employment or live game ownership.
+
 Candidate languages: RU native; EN C1 (not C2); DE/FR B1; FI/AF elementary. Flag language_gaps only when vacancy explicitly requires a language.
 Return JSON only:
 {
@@ -318,7 +326,10 @@ Deno.serve(async (req) => {
           "analyze",
         ),
       );
-      const result = applyLanguageAdjustments(vacancySlice, raw);
+      const result = applyAnalyzeSanitization(
+        vacancySlice,
+        applyLanguageAdjustments(vacancySlice, raw),
+      );
 
       return json({
         match_percent: result.match_percent,

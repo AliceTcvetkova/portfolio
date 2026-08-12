@@ -161,7 +161,12 @@
       highlights.unshift("Stakeholder alignment across business, analytics, dev, ops");
     }
     const concerns = [];
-    if (gaming) concerns.push("No direct gaming industry experience");
+    if (gaming) {
+      concerns.push("No direct gaming industry / live ops employment in profile");
+      if (/live casual|game economy|player motivation|monetization|live ops|strong game design/i.test(lower)) {
+        concerns.push("JD requires live casual / game economy / deep game design — personal projects only, not commercial track record");
+      }
+    }
     if (/chinese|mandarin|китайск/i.test(lower)) {
       concerns.push("Chinese required — not in language profile (EN C1, DE/FR B1 only)");
       if (action === "analyze") {
