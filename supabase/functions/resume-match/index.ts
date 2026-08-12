@@ -232,6 +232,7 @@ CRITICAL — highlights vs concerns:
 - highlights = ONLY candidate strengths WITH evidence (company name, metric, or "personal project/case study/transferable").
 - NEVER copy, paraphrase, or flip vacancy requirements into highlights (e.g. "proven live casual games", "strong game design", "game economy" are NOT highlights unless explicitly in profile as commercial work).
 - If JD requires live ops, game economy, shipped live casual games, deep game design — put in expected_concerns, NOT highlights.
+- expected_concerns = REAL gaps only (missing skills/experience). Do NOT list JD requirement bullets as concerns if candidate profile already covers them (e.g. Jira, 0→1 launches, platform PM, B2B).
 
 For game dev vacancies: emphasize production PM transfer (pipeline, dependencies, risk, scope, cross-functional delivery). Do NOT claim commercial game-studio employment or live game ownership.
 
@@ -326,9 +327,17 @@ Deno.serve(async (req) => {
           "analyze",
         ),
       );
+      const profileContext = [
+        knowledge.profile,
+        knowledge.cv_en,
+        knowledge.cv_ru,
+        (knowledge.gamedev_positioning || "").slice(0, 1500),
+      ].join("\n\n").slice(0, 8000);
+
       const result = applyAnalyzeSanitization(
         vacancySlice,
         applyLanguageAdjustments(vacancySlice, raw),
+        profileContext,
       );
 
       return json({

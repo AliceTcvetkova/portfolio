@@ -1,4 +1,4 @@
-/** Remove LLM false positives: JD requirements echoed as candidate highlights. */
+/** Remove LLM false positives: JD requirements echoed as highlights or false gaps. */
 
 import type { AnalyzeResult } from "./language-match.ts";
 
@@ -27,30 +27,32 @@ const EVIDENCE_MARKERS: RegExp[] = [
   /\btransferable\b/i,
   /\btransition(ing)?\s+(into|to)\b/i,
   /\bgame development projects\b/i,
-  /\bnot (commercial|studio)\b/i,
   /\bearly payments\b/i,
-  /\bplatform (launch|pilot)\b/i,
+  /\bplatform\b/i,
+  /\blaunch\b/i,
+  /\bjira\b/i,
+  /\bconfluence\b/i,
+  /\bb2b\b/i,
+  /\bzero to (one|production)\b/i,
+  /\b0→1\b/i,
+  /\bconcept.*pilot\b/i,
   /\bdelivery governance\b/i,
   /\bprocess audit\b/i,
 ];
 
-/** Claims that need explicit evidence or personal-learning qualifier */
+/** Only block highlights that claim commercial game outcomes not in profile */
 const FALSE_HIGHLIGHT_PATTERNS: RegExp[] = [
-  /proven track record/i,
+  /proven track record.*(live|game|casual|mobile game)/i,
   /strong game design/i,
   /deep understanding of player motivation/i,
   /\bgame economy\b/i,
   /\blive (casual|ops|game|service)\b/i,
   /owning and growing successful/i,
   /successful live casual/i,
-  /player motivation.*progression/i,
-  /progression.*game economy/i,
+  /player motivation.*progression.*economy/i,
   /monetization.*(expert|proven|track record|ownership)/i,
   /shipped (commercial|live|mobile|successful) game/i,
   /years (of |in )?(the )?game (industry|studio)/i,
-  /owning and growing/i,
-  /growing successful/i,
-  /feature design.*(player|game)/i,
 ];
 
 const VACANCY_GAMEDEV_GAPS: { pattern: RegExp; message: string }[] = [
@@ -63,16 +65,16 @@ const VACANCY_GAMEDEV_GAPS: { pattern: RegExp; message: string }[] = [
     message: "No proven game economy / monetization ownership in profile",
   },
   {
-    pattern: /player motivation|progression.*economy|meta.?progression|feature design/i,
+    pattern: /player motivation.*(economy|monetization)|game economy.*player/i,
     message:
-      "Advanced game design (motivation/economy/feature design) — personal learning only, not shipped live titles",
+      "Advanced live game economy / motivation design — personal learning only, not commercial live titles",
   },
   {
     pattern: /proven track record.*(game|gaming|mobile game|live)/i,
     message: "No proven track record of shipping or growing commercial live games",
   },
   {
-    pattern: /strong game design|game design skills/i,
+    pattern: /strong game design skills|deep game design/i,
     message:
       "Strong commercial game design track record not in profile — production PM + personal projects only",
   },
@@ -82,11 +84,57 @@ const VACANCY_GAMEDEV_GAPS: { pattern: RegExp; message: string }[] = [
   },
 ];
 
+/** If concern matches left side and profile matches right — not a real gap */
+const CAPABILITY_RULES: { concern: RegExp; profile: RegExp }[] = [
+  { concern: /\bjira\b/i, profile: /\bjira\b/i },
+  { concern: /\bconfluence\b/i, profile: /\bconfluence\b/i },
+  {
+    concern: /zero to one|0 to 1|0→1|from zero|from scratch|launching products or platforms/i,
+    profile: /zero to production|concept.*pilot|from (zero|concept)|9 month|launch|0→1/i,
+  },
+  {
+    concern: /platform-as-a-service|platform as a service|\bpaas\b|platform environments/i,
+    profile: /\bplatform\b|irpo|vk|professionalitet/i,
+  },
+  {
+    concern: /digital commerce|e-?commerce|marketplace/i,
+    profile: /ozon|fintech|marketplace|e-?commerce|fmcg|seller/i,
+  },
+  {
+    concern: /\bb2b\b.*saas|b2b saas|saas/i,
+    profile: /\bb2b\b|saas|consulting|stakeholder|enterprise/i,
+  },
+  {
+    concern: /customer success|partner-facing|partner programs/i,
+    profile: /stakeholder|custdev|user interview|consulting|partner|b2b|vtb/i,
+  },
+  {
+    concern: /documentation|tracking.*reporting/i,
+    profile: /jira|confluence|documentation|reporting|backlog|roadmap/i,
+  },
+];
+
+const OR_SEGMENT_PROFILE: { segment: RegExp; profile: RegExp }[] = [
+  { segment: /gaming|game dev|game industry/i, profile: /gamedev|game development|locus|eco_clean|personal.*game/i },
+  { segment: /digital commerce|e-?commerce|commerce/i, profile: /ozon|fintech|marketplace|commerce|fmcg/i },
+  { segment: /platform/i, profile: /platform|irpo|vk|govtech|edtech platform/i },
+  { segment: /saas/i, profile: /b2b|saas|consulting|stakeholder/i },
+  { segment: /customer success/i, profile: /stakeholder|custdev|user interview|consulting/i },
+  { segment: /jira/i, profile: /jira/i },
+  { segment: /confluence/i, profile: /confluence/i },
+];
+
 const DEFAULT_HIGHLIGHTS = [
   "Cross-functional delivery with 20+ teams (Ozon Bank)",
-  "100+ user interviews & platform launch (IRPO)",
-  "Production PM: scope, dependencies, risks — transferable to game production teams",
+  "100+ user interviews & platform 0→1 launch (IRPO)",
+  "Production PM: scope, dependencies, risks — transferable across product teams",
 ];
+
+export function isGamedevVacancy(text: string): boolean {
+  return /game|gaming|gamedev|game dev|gameplay|game producer|game project|unity|unreal|mobile game|game studio/i.test(
+    text,
+  );
+}
 
 export function hasCandidateEvidence(text: string): boolean {
   return EVIDENCE_MARKERS.some((p) => p.test(text));
@@ -104,17 +152,17 @@ function tokenizeForOverlap(text: string): string[] {
     .filter((w) => w.length > 4);
 }
 
-/** Highlight likely copied from JD if most content words appear in vacancy without candidate evidence */
 export function mirrorsVacancyRequirement(vacancy: string, highlight: string): boolean {
   if (hasCandidateEvidence(highlight)) return false;
   const words = tokenizeForOverlap(highlight);
-  if (words.length < 3) return false;
+  if (words.length < 4) return false;
   const vLower = vacancy.toLowerCase();
   const matched = words.filter((w) => vLower.includes(w));
-  return matched.length / words.length >= 0.55;
+  return matched.length / words.length >= 0.65;
 }
 
 export function detectGamedevVacancyGaps(vacancy: string): string[] {
+  if (!isGamedevVacancy(vacancy)) return [];
   const gaps: string[] = [];
   for (const { pattern, message } of VACANCY_GAMEDEV_GAPS) {
     if (pattern.test(vacancy) && !gaps.includes(message)) gaps.push(message);
@@ -122,10 +170,53 @@ export function detectGamedevVacancyGaps(vacancy: string): string[] {
   return gaps;
 }
 
+function stripGapPrefix(text: string): string {
+  return text.replace(/^Gap\s*[—-]\s*not in profile:\s*/i, "").trim();
+}
+
+function profileSupportsConcern(concern: string, profile: string): boolean {
+  const c = concern.toLowerCase();
+  const p = profile.toLowerCase();
+  const inner = stripGapPrefix(c);
+
+  for (const { concern: cp, profile: pp } of CAPABILITY_RULES) {
+    if (cp.test(inner) && pp.test(p)) return true;
+  }
+
+  if (/\bor\b|,/.test(inner)) {
+    const parts = inner.split(/\bor\b|,/);
+    if (parts.some((part) => {
+      const seg = part.trim();
+      if (!seg) return false;
+      return OR_SEGMENT_PROFILE.some(({ segment, profile: sp }) =>
+        segment.test(seg) && sp.test(p)
+      );
+    })) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/** LLM sometimes lists JD bullets as concerns — drop if profile already covers them */
+export function filterFalseConcerns(
+  concerns: string[],
+  profileContext: string,
+): string[] {
+  return concerns.filter((raw) => {
+    const text = String(raw).trim();
+    if (!text) return false;
+    if (profileSupportsConcern(text, profileContext)) return false;
+    return true;
+  });
+}
+
 export function sanitizeAnalyzeHighlights(
   vacancy: string,
   highlights: string[],
   expected_concerns: string[],
+  profileContext = "",
 ): { highlights: string[]; expected_concerns: string[]; matchPenalty: number } {
   const clean: string[] = [];
   const concerns = new Set(expected_concerns ?? []);
@@ -135,26 +226,33 @@ export function sanitizeAnalyzeHighlights(
     const text = String(h).trim();
     if (!text) continue;
 
-    if (
-      (isFalseCapabilityHighlight(text) || mirrorsVacancyRequirement(vacancy, text)) &&
-      !hasCandidateEvidence(text)
-    ) {
-      concerns.add(`Gap — not in profile: ${text}`);
-      matchPenalty += 4;
+    const falseGameClaim = isFalseCapabilityHighlight(text) && !hasCandidateEvidence(text);
+    const jdEcho =
+      mirrorsVacancyRequirement(vacancy, text) &&
+      !hasCandidateEvidence(text) &&
+      !profileSupportsConcern(text, profileContext);
+
+    if (falseGameClaim || jdEcho) {
+      if (!profileSupportsConcern(text, profileContext)) {
+        concerns.add(`Gap — not in profile: ${text}`);
+        matchPenalty += 4;
+      }
       continue;
     }
     clean.push(text);
   }
 
   for (const gap of detectGamedevVacancyGaps(vacancy)) {
-    if (!concerns.has(gap)) concerns.add(gap);
+    if (!profileSupportsConcern(gap, profileContext)) concerns.add(gap);
   }
+
+  const filteredConcerns = filterFalseConcerns([...concerns], profileContext);
 
   const finalHighlights = clean.length > 0 ? clean.slice(0, 5) : DEFAULT_HIGHLIGHTS;
 
   return {
     highlights: finalHighlights,
-    expected_concerns: [...concerns],
+    expected_concerns: filteredConcerns,
     matchPenalty,
   };
 }
@@ -162,11 +260,13 @@ export function sanitizeAnalyzeHighlights(
 export function applyAnalyzeSanitization(
   vacancy: string,
   result: AnalyzeResult,
+  profileContext = "",
 ): AnalyzeResult {
   const sanitized = sanitizeAnalyzeHighlights(
     vacancy,
     result.highlights ?? [],
     result.expected_concerns ?? [],
+    profileContext,
   );
 
   let match = result.match_percent;
@@ -175,12 +275,14 @@ export function applyAnalyzeSanitization(
   }
 
   let fit_verdict = result.fit_verdict ?? "strong_fit";
-  const hasGamedevGaps = detectGamedevVacancyGaps(vacancy).length > 0;
+  const gamedevGaps = detectGamedevVacancyGaps(vacancy).filter(
+    (g) => !profileSupportsConcern(g, profileContext),
+  );
   const removedManyHighlights =
     (result.highlights?.length ?? 0) > 0 &&
     sanitized.highlights.length < (result.highlights?.length ?? 0);
 
-  if (hasGamedevGaps && removedManyHighlights && fit_verdict === "strong_fit") {
+  if (gamedevGaps.length > 0 && removedManyHighlights && fit_verdict === "strong_fit") {
     fit_verdict = "conditional_fit";
   }
 
