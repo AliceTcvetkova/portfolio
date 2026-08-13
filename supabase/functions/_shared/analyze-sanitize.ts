@@ -38,6 +38,13 @@ const EVIDENCE_MARKERS: RegExp[] = [
   /\bconcept.*pilot\b/i,
   /\bdelivery governance\b/i,
   /\bprocess audit\b/i,
+  /\bdata-driven\b/i,
+  /\bmeasurable\b/i,
+  /\btransformation\b/i,
+  /\bscaling\b/i,
+  /\b10\+?\s*years?\b/i,
+  /\bprogram management\b/i,
+  /\bproject management\b/i,
 ];
 
 /** Only block highlights that claim commercial game outcomes not in profile */
@@ -112,6 +119,18 @@ const CAPABILITY_RULES: { concern: RegExp; profile: RegExp }[] = [
     concern: /documentation|tracking.*reporting/i,
     profile: /jira|confluence|documentation|reporting|backlog|roadmap/i,
   },
+  {
+    concern: /program or project management|project management experience|program management experience/i,
+    profile: /product manager|project manager|delivery manager|program|10\+?\s*years?|10\+ лет/i,
+  },
+  {
+    concern: /program transformation|scaling|redesign|transform initiatives/i,
+    profile: /unified|scal|120\+|20\+ team|methodology|process|transformation|redesign|audit|workflow/i,
+  },
+  {
+    concern: /data-driven|measurable results|measurable impact|measurable outcome/i,
+    profile: /data-driven|measurable|metrics|измерим|kpi|okr|turnover|результат|\+\d+%/i,
+  },
 ];
 
 const OR_SEGMENT_PROFILE: { segment: RegExp; profile: RegExp }[] = [
@@ -174,10 +193,36 @@ function stripGapPrefix(text: string): string {
   return text.replace(/^Gap\s*[—-]\s*not in profile:\s*/i, "").trim();
 }
 
+/** JD asks for N years PM; profile has 10+ */
+function yearsRequirementMet(concern: string, profile: string): boolean {
+  const m = concern.match(/(\d+)\+?\s*(?:years?|yrs?)/i);
+  if (!m) return false;
+  const required = parseInt(m[1], 10);
+  if (Number.isNaN(required)) return false;
+  if (/10\+?\s*(?:years?|yrs?)|10\+ лет|experience_years:\s*10|10\+ years/i.test(profile)) {
+    return required <= 10;
+  }
+  const have = profile.match(/(\d+)\+?\s*(?:years?|yrs?)/i);
+  if (have) return parseInt(have[1], 10) >= required;
+  return false;
+}
+
+/** LLM pasted JD requirement bullets into concerns (not real gaps) */
+function isJdRequirementBullet(text: string): boolean {
+  const t = stripGapPrefix(text);
+  return (
+    /^\d+\+?\s*years?.*(experience|program|project|management)/i.test(t) ||
+    /^experience (leading|with|in|launching|driving)/i.test(t) ||
+    /^proven experience|^background in|^familiarity with|^strong experience/i.test(t) ||
+    /^track record of/i.test(t)
+  );
+}
+
 function profileSupportsConcern(concern: string, profile: string): boolean {
-  const c = concern.toLowerCase();
+  const inner = stripGapPrefix(concern.toLowerCase());
   const p = profile.toLowerCase();
-  const inner = stripGapPrefix(c);
+
+  if (yearsRequirementMet(inner, profile)) return true;
 
   for (const { concern: cp, profile: pp } of CAPABILITY_RULES) {
     if (cp.test(inner) && pp.test(p)) return true;
@@ -192,6 +237,21 @@ function profileSupportsConcern(concern: string, profile: string): boolean {
         segment.test(seg) && sp.test(p)
       );
     })) {
+      return true;
+    }
+  }
+
+  // Generic PM phrases echoed from JD without "missing" language
+  if (isJdRequirementBullet(concern)) {
+    const keywords = tokenizeForOverlap(inner).filter((w) =>
+      !["experience", "leading", "proven", "years", "program", "project", "management", "initiatives"].includes(w)
+    );
+    if (keywords.length >= 2) {
+      const matched = keywords.filter((w) => p.includes(w));
+      if (matched.length / keywords.length >= 0.45) return true;
+    }
+    if (/program|project|management|transformation|scaling|data-driven|measurable/.test(inner) &&
+      /product manager|project manager|delivery|10\+|ozon|irpo|data-driven|measurable/.test(p)) {
       return true;
     }
   }
