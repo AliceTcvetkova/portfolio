@@ -159,8 +159,3 @@
 .vision__open dd {
   margin: 0.25rem 0 0;
 }
-
-/* Reuse progress styles from gamedev-agent */
-.vision .gamedev-agent__progress {
-  margin-top: 1rem;
-}
