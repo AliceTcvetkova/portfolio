@@ -1,0 +1,42 @@
+{
+  "updated": "2026-08-11",
+  "currentLesson": "Level 1 · MDA Framework",
+  "nextTopic": "Core Loop",
+  "streak": 0,
+  "areas": [
+    { "id": "game-design", "label": "Game Design", "percent": 0 },
+    { "id": "open-world", "label": "Open World Design", "percent": 0 },
+    { "id": "economy", "label": "Retention & Economy", "percent": 0 },
+    { "id": "production", "label": "Production", "percent": 0 },
+    { "id": "prototype", "label": "Prototype", "percent": 0 },
+    { "id": "unreal", "label": "Unreal Engine", "percent": 0, "detail": "0/58 P0+P1" },
+    { "id": "blender", "label": "Blender", "percent": 0, "detail": "0/14" }
+  ],
+  "completed": [],
+  "weakAreas": [
+    "level design",
+    "technical implementation (Blueprints)",
+    "economy balancing",
+    "3D asset creation"
+  ],
+  "unreal": {
+    "phase": 1,
+    "current": "A01 — Project setup",
+    "tracks": [
+      { "name": "A — Basics", "done": 0, "total": 21 },
+      { "name": "F — Camera/Anim", "done": 0, "total": 16 },
+      { "name": "B — TDS select", "done": 0, "total": 9 }
+    ]
+  },
+  "blender": {
+    "current": "BL01 — Interface & Navigation"
+  },
+  "gdd": [
+    { "section": "Identity & fantasy", "brief": 100, "gdd": null },
+    { "section": "Core loops (dual)", "brief": 100, "gdd": 0 },
+    { "section": "MDA", "brief": null, "gdd": 0 },
+    { "section": "Mechanics inventory", "brief": null, "gdd": 0 },
+    { "section": "World map", "brief": null, "gdd": 0 },
+    { "section": "Economy", "brief": null, "gdd": 0 }
+  ]
+}

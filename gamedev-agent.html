@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <title>GameDev Agent · Alice Tsvetkova</title>
+  <meta name="description" content="Personal AI tutor for game design and production — teaches curriculum, reviews homework, tracks progress, builds a Game Design Bible for my restoration game without redesigning it every session.">
+  <script src="js/site-config.js"></script>
+  <script src="js/site-analytics.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/gamedev-agent.css">
+</head>
+<body data-sketches="vision-projects">
+
+  <header class="site-header">
+    <a class="site-header__logo" href="index.html">Alice Tsvetkova</a>
+    <nav class="site-header__nav">
+      <a href="index.html#cases">Selected Product Cases</a>
+      <a href="index.html#ideas">Personal Product Vision</a>
+      <a href="index.html#about">About me</a>
+      <a class="site-header__nav--resume" href="assets/resume/Tsvetkova-Product.pdf" target="_blank" rel="noopener noreferrer" download="Tsvetkova-Alice-Product-Manager-Resume.pdf">Resume (PDF)</a>
+    </nav>
+  </header>
+
+  <main class="case-detail gamedev-agent">
+    <a class="case-detail__back" href="index.html#ideas">← Back to personal product vision</a>
+    <p class="case-detail__label">Personal Product Vision · AI product + learning</p>
+    <h1>GameDev Agent</h1>
+    <p class="gamedev-agent__lede">A personal AI tutor I built for my transition into game product management: it teaches a structured curriculum, reviews homework with scores, tracks progress, and applies every lesson to <em>my</em> game — without reinventing the concept each session. Not a generic “learn gamedev” chatbot — dogfooding toward a playable prototype.</p>
+
+    <section class="gamedev-agent__meta">
+      <dl class="gamedev-agent__grid">
+        <div>
+          <dt>Role</dt>
+          <dd>AI tutor · PM → Game PM transition</dd>
+        </div>
+        <div>
+          <dt>Who it’s for</dt>
+          <dd>Me — strong PM/UX, weak game design theory & engines</dd>
+        </div>
+        <div>
+          <dt>Job to be done</dt>
+          <dd>Daily lesson + homework review → growing Game Design Bible + skills</dd>
+        </div>
+        <div>
+          <dt>Stack</dt>
+          <dd>Cursor skill · Markdown knowledge base · local workspace</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section id="gamedev-progress">
+      <h2>Learning progress</h2>
+      <p class="gamedev-agent__section-intro">Live snapshot from my agent workspace — updated as I pass topics (≥7/10).</p>
+      <div class="gamedev-agent__progress">
+        <div id="gamedev-progress-meta" class="gamedev-agent__progress-meta"></div>
+        <div id="gamedev-progress-bars"></div>
+        <div class="gamedev-agent__progress-split">
+          <div>
+            <h3>Completed ✓</h3>
+            <div id="gamedev-progress-completed"></div>
+          </div>
+          <div>
+            <h3>Weak areas</h3>
+            <div id="gamedev-progress-weak"></div>
+          </div>
+        </div>
+        <div id="gamedev-progress-tracks" style="margin-top: 1.5rem;"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Why I built it</h2>
+      <p>I’m transitioning to game product management and building my own game — exploration + world restoration with <strong>dual progression</strong> (character + world). Generic AI treats every session as a blank slate: it suggests new genres, rewrites my core loop, or gives answers instead of teaching me to think like a designer.</p>
+      <p>My bottleneck: I need <strong>structured learning</strong> (MDA, economy, open world) parallel to Unreal and Blender — with homework checked strictly, progress tracked, and theory applied to <em>one</em> game concept I’ve already committed to.</p>
+      <ul class="gamedev-agent__bullets">
+        <li>Fixed source of truth — established decisions vs hypotheses vs open questions</li>
+        <li>Teaching mode — asks me to analyze first; doesn’t dump finished GDD paragraphs</li>
+        <li>Three tracks — game design curriculum + ProductStar Unreal + Blender via YouTube</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>My game (source of truth)</h2>
+      <p>The agent reads a locked <strong>Game Design Brief</strong> — it must not redesign unless I explicitly ask.</p>
+      <div class="gamedev-agent__layer-grid">
+        <article class="gamedev-agent__layer">
+          <h3>Player fantasy</h3>
+          <p>“I don’t just level up — I gradually return life to a damaged world and <em>see</em> the consequences of my actions.”</p>
+        </article>
+        <article class="gamedev-agent__layer">
+          <h3>Dual progression</h3>
+          <ul>
+            <li><strong>Character</strong> — abilities, tools, access to harder areas</li>
+            <li><strong>World</strong> — cleaner, livelier, new NPCs/areas/content from restoration</li>
+          </ul>
+        </article>
+      </div>
+      <p class="gamedev-agent__section-intro" style="margin-top: 1rem;">Two core loops — the second is the differentiator:</p>
+      <p><strong>Player loop</strong></p>
+      <pre class="gamedev-agent__loop">Explore → Encounter problem → Act → Reward → Improve → Explore new areas</pre>
+      <p><strong>World loop</strong></p>
+      <pre class="gamedev-agent__loop gamedev-agent__loop--highlight">Player action → World changes → New world state → New exploration possibilities</pre>
+      <div class="gamedev-agent__tags">
+        <span class="gamedev-agent__tag">🔒 Established</span>
+        <span class="gamedev-agent__tag">🔬 Hypothesis</span>
+        <span class="gamedev-agent__tag">❓ Open question</span>
+        <span class="gamedev-agent__tag">💡 Recommendation</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>What it does</h2>
+      <p>A Cursor skill + local workspace. I open <code>gamedev-agent</code>, say one phrase, get one focused session.</p>
+      <ol class="reels-agent__pipeline">
+        <li><strong>«Я готова учиться»</strong> — today’s topic, materials, assignment, apply-to-my-game task</li>
+        <li><strong>«Проверь моё задание»</strong> — score /10, specific feedback, pass threshold ≥7</li>
+        <li><strong>«Примени к моей игре»</strong> — practical exercise on restoration concept</li>
+        <li><strong>«Blender урок»</strong> — YouTube self-study: topic + deliverable, I pick the video</li>
+      </ol>
+    </section>
+
+    <section class="gamedev-agent__layers">
+      <h2>Knowledge base</h2>
+      <p class="gamedev-agent__section-intro">The agent only works because context is encoded — my game brief, curriculum, course tracks, rubric.</p>
+      <div class="gamedev-agent__layer-grid">
+        <article class="gamedev-agent__layer">
+          <h3>Layer 1 · Game Design Brief</h3>
+          <p>Identity, player fantasy, dual loops, design principles — <strong>locked</strong>. Agent checks new mechanics against 9-point checklist and principles 1–7.</p>
+          <ul>
+            <li>Progression must create visible world consequences</li>
+            <li>Abilities unlock possibilities, not just numbers</li>
+            <li>World restoration reveals content — not cosmetic only</li>
+          </ul>
+        </article>
+        <article class="gamedev-agent__layer">
+          <h3>Layer 2 · Curriculum & courses</h3>
+          <p>5 levels: fundamentals → open world → economy → production → prototype. Parallel tracks:</p>
+          <ul>
+            <li>Unreal — ProductStar (104 lessons mapped, P0+P1 for prototype)</li>
+            <li>Blender — 14 YouTube assignments → damaged/restored props</li>
+            <li>Schedule — GD Mon/Wed/Fri · UE Tue/Thu · Blender Sat</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Product decisions</h2>
+      <div class="gamedev-agent__layer-grid">
+        <article class="gamedev-agent__layer">
+          <h3>No blank-slate ideation</h3>
+          <p>Recommendations are labeled 💡 — never promoted to canon without my confirmation.</p>
+        </article>
+        <article class="gamedev-agent__layer">
+          <h3>Strict review</h3>
+          <p>Motivation ≠ action. Mechanics ≠ dynamics. Failed homework = rework, not checkmark.</p>
+        </article>
+        <article class="gamedev-agent__layer">
+          <h3>PM-native format</h3>
+          <p>Frameworks, tables, checkpoints — leverages my product background instead of dumbing down.</p>
+        </article>
+        <article class="gamedev-agent__layer">
+          <h3>Outcome = GDD + prototype</h3>
+          <p>Months of sessions → filled <code>gdd.md</code> + Unreal vertical slice (explore, restore, see world change).</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="gamedev-agent__status">
+      <h2>Status</h2>
+      <p><strong>In progress</strong> — curriculum started; Unreal track A01 next; progress synced to this page via JSON.</p>
+      <ul class="gamedev-agent__bullets gamedev-agent__bullets--compact">
+        <li>Goal: Game PM credibility + playable restoration-game vertical slice</li>
+        <li>Working title TBD — brief and loops are fixed</li>
+        <li>Next proof: first passed topics in Completed + UE project with zone restoration greybox</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>© Alice Tsvetkova · Product Manager</p>
+  </footer>
+
+  <script src="js/gamedev-agent-progress.js"></script>
+  <script src="js/i18n/dict-ru.js"></script>
+  <script src="js/i18n/dict-ru-attrs.js"></script>
+  <script src="js/site-i18n.js"></script>
+  <script src="js/sketch-bg.js"></script>
+</body>
+</html>
