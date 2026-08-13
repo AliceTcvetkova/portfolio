@@ -1,0 +1,166 @@
+/* Vision Projects — Game Worlds */
+
+.vision__lede {
+  max-width: 42rem;
+  color: var(--text-muted);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+
+.vision__figure {
+  margin: 1.5rem 0 0;
+}
+
+.vision__figure img {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(113, 112, 255, 0.2);
+}
+
+.vision__figure figcaption {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-subtle);
+  max-width: 42rem;
+}
+
+.vision__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.vision__card {
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid rgba(113, 112, 255, 0.18);
+  border-radius: var(--radius-lg);
+}
+
+.vision__card h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.vision__card p,
+.vision__card ul {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.vision__card ul {
+  padding-left: 1.1rem;
+  margin-top: 0.5rem;
+}
+
+.vision__card li {
+  margin-bottom: 0.35rem;
+}
+
+.vision__loop {
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  padding: 1rem 1.25rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  overflow-x: auto;
+  margin: 0.75rem 0 0;
+}
+
+.vision__loop--world {
+  border-color: rgba(113, 112, 255, 0.35);
+  background: var(--accent-muted);
+}
+
+.vision__pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+}
+
+.vision__pill-list li {
+  font-size: 0.8125rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: var(--accent-muted);
+  color: var(--text-muted);
+  border: 1px solid rgba(113, 112, 255, 0.22);
+}
+
+.vision__outcomes {
+  font-size: 0.875rem;
+  color: var(--text-subtle);
+  margin-top: 0.75rem;
+  font-weight: 500;
+}
+
+.vision__link-card {
+  display: block;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid rgba(113, 112, 255, 0.18);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.vision__link-card:hover {
+  border-color: rgba(113, 112, 255, 0.4);
+  background: var(--bg-card-hover);
+}
+
+.vision__link-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.vision__link-card p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+}
+
+.vision__link-card span {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--accent);
+}
+
+.vision__section-intro {
+  color: var(--text-muted);
+  max-width: 40rem;
+}
+
+.vision__open {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+}
+
+.vision__open dt {
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 0.75rem;
+}
+
+.vision__open dd {
+  margin: 0.25rem 0 0;
+}
+
+/* Reuse progress styles from gamedev-agent */
+.vision .gamedev-agent__progress {
+  margin-top: 1rem;
+}
