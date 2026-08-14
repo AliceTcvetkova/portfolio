@@ -45,6 +45,10 @@ const EVIDENCE_MARKERS: RegExp[] = [
   /\b10\+?\s*years?\b/i,
   /\bprogram management\b/i,
   /\bproject management\b/i,
+  /\bdigital product\b/i,
+  /\btechnology\b/i,
+  /\bfintech\b/i,
+  /\bit ecosystem\b/i,
 ];
 
 /** Only block highlights that claim commercial game outcomes not in profile */
@@ -131,6 +135,18 @@ const CAPABILITY_RULES: { concern: RegExp; profile: RegExp }[] = [
     concern: /data-driven|measurable results|measurable impact|measurable outcome/i,
     profile: /data-driven|measurable|metrics|измерим|kpi|okr|turnover|результат|\+\d+%/i,
   },
+  {
+    concern: /technology|tech company|tech environment|digital product|software|IT ecosystem/i,
+    profile: /technology|tech |fintech|edtech|platform|digital product|IT ecosystem|it-?экосистем|vk|ozon|irpo|python|sql/i,
+  },
+  {
+    concern: /security|infosec|cybersecurity|cyber security/i,
+    profile: /fintech|risk|infosec|compliance|governance|regulatory|44-fz|legal|security|контрол|риск/i,
+  },
+  {
+    concern: /security or technology|technology or security/i,
+    profile: /fintech|edtech|platform|digital|technology|tech |IT ecosystem|vk|ozon|irpo|risk|governance/i,
+  },
 ];
 
 const OR_SEGMENT_PROFILE: { segment: RegExp; profile: RegExp }[] = [
@@ -141,6 +157,14 @@ const OR_SEGMENT_PROFILE: { segment: RegExp; profile: RegExp }[] = [
   { segment: /customer success/i, profile: /stakeholder|custdev|user interview|consulting/i },
   { segment: /jira/i, profile: /jira/i },
   { segment: /confluence/i, profile: /confluence/i },
+  {
+    segment: /technology|tech\b|digital product|software|IT/i,
+    profile: /technology|tech |fintech|edtech|platform|digital|IT ecosystem|it-?экосистем|vk|ozon|irpo|python|sql/i,
+  },
+  {
+    segment: /security|infosec|cyber/i,
+    profile: /fintech|risk|infosec|compliance|governance|regulatory|44-fz|legal|security|риск/i,
+  },
 ];
 
 const DEFAULT_HIGHLIGHTS = [
