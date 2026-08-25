@@ -86,23 +86,31 @@ async function chatGroq(
     throw new Error("GROQ_API_KEY not set");
   }
   const model = opts.model ?? GROQ_MODEL;
-  const useJsonMode = !model.includes("gpt-oss");
+  const isGptOss = model.includes("gpt-oss");
+  const tokenLimit = opts.maxTokens ?? 2048;
+  const body: Record<string, unknown> = {
+    model,
+    temperature: isGptOss ? 0.5 : 0.2,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+  };
+  if (isGptOss) {
+    body.max_completion_tokens = tokenLimit;
+    body.include_reasoning = false;
+  } else {
+    body.max_tokens = tokenLimit;
+    body.response_format = { type: "json_object" };
+  }
+
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${GROQ_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      max_tokens: opts.maxTokens ?? 2048,
-      ...(useJsonMode ? { response_format: { type: "json_object" } } : {}),
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -130,6 +138,11 @@ async function chatGroq(
   const content = json.choices?.[0]?.message?.content ?? "";
   if (!content.trim()) {
     const reason = json.choices?.[0]?.finish_reason ?? "unknown";
+    if (reason === "length") {
+      throw new Error(
+        "Groq token limit — output budget exhausted. Paste a shorter job description or retry in a minute.",
+      );
+    }
     throw new Error(`Groq returned empty content (${model}, finish=${reason})`);
   }
   return content;
@@ -163,8 +176,8 @@ async function chatGroqAnalyze(
   buildUser: (scale: PromptScale) => string,
 ): Promise<string> {
   const attempts: { scale: PromptScale; maxTokens: number; delayMs: number }[] = [
-    { scale: "compact", maxTokens: 1024, delayMs: 0 },
-    { scale: "minimal", maxTokens: 768, delayMs: 1500 },
+    { scale: "compact", maxTokens: 2048, delayMs: 0 },
+    { scale: "minimal", maxTokens: 1536, delayMs: 1500 },
   ];
 
   let lastErr: unknown;
@@ -185,12 +198,12 @@ async function chatGroqAnalyze(
 
 async function chatGroqCv(system: string, user: string, compactUser: string): Promise<string> {
   try {
-    return await chatGroq(system, user, { maxTokens: 2048, model: GROQ_CV_MODEL });
+    return await chatGroq(system, user, { maxTokens: 4096, model: GROQ_CV_MODEL });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (!isRetryableGroqLimit(msg)) throw e;
     await sleep(1500);
-    return chatGroq(system, compactUser, { maxTokens: 1536, model: GROQ_CV_MODEL });
+    return chatGroq(system, compactUser, { maxTokens: 3072, model: GROQ_CV_MODEL });
   }
 }
 
