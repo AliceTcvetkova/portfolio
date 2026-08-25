@@ -127,7 +127,12 @@ async function chatGroq(
   }
 
   const json = await res.json();
-  return json.choices?.[0]?.message?.content ?? "";
+  const content = json.choices?.[0]?.message?.content ?? "";
+  if (!content.trim()) {
+    const reason = json.choices?.[0]?.finish_reason ?? "unknown";
+    throw new Error(`Groq returned empty content (${model}, finish=${reason})`);
+  }
+  return content;
 }
 
 function isGroqTokenLimitError(err: string): boolean {
@@ -158,8 +163,8 @@ async function chatGroqAnalyze(
   buildUser: (scale: PromptScale) => string,
 ): Promise<string> {
   const attempts: { scale: PromptScale; maxTokens: number; delayMs: number }[] = [
-    { scale: "compact", maxTokens: 512, delayMs: 0 },
-    { scale: "minimal", maxTokens: 384, delayMs: 1500 },
+    { scale: "compact", maxTokens: 1024, delayMs: 0 },
+    { scale: "minimal", maxTokens: 768, delayMs: 1500 },
   ];
 
   let lastErr: unknown;
@@ -220,8 +225,18 @@ async function chat(
 }
 
 function parseJson<T>(raw: string): T {
-  const trimmed = raw.trim().replace(/^```json?\n?/, "").replace(/\n?```$/, "");
-  return JSON.parse(trimmed) as T;
+  const trimmed = raw.trim().replace(/^```json?\n?/i, "").replace(/\n?```$/, "");
+  if (!trimmed) throw new Error("LLM returned empty response — retry in a moment.");
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch {
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(trimmed.slice(start, end + 1)) as T;
+    }
+    throw new Error("LLM returned invalid JSON — retry or paste a shorter vacancy.");
+  }
 }
 
 function stripFrontmatter(text: string): string {
