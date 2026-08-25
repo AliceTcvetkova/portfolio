@@ -237,6 +237,34 @@ async function chat(
   );
 }
 
+function normalizeStringList(items: unknown): string[] {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => {
+      if (typeof item === "string") return item.trim();
+      if (item && typeof item === "object") {
+        const obj = item as Record<string, unknown>;
+        const text = obj.text ?? obj.highlight ?? obj.value ?? obj.description ?? obj.concern;
+        if (typeof text === "string") return text.trim();
+        return JSON.stringify(item);
+      }
+      return String(item).trim();
+    })
+    .filter(Boolean);
+}
+
+function normalizeAnalyzeResult(raw: AnalyzeResult): AnalyzeResult {
+  return {
+    ...raw,
+    highlights: normalizeStringList(raw.highlights),
+    expected_concerns: normalizeStringList(raw.expected_concerns),
+    language_gaps: normalizeStringList(raw.language_gaps),
+    hard_blockers: normalizeStringList(raw.hard_blockers),
+    cv_sections_to_boost: normalizeStringList(raw.cv_sections_to_boost),
+    matched_projects: normalizeStringList(raw.matched_projects),
+  };
+}
+
 function parseJson<T>(raw: string): T {
   const trimmed = raw.trim().replace(/^```json?\n?/i, "").replace(/\n?```$/, "");
   if (!trimmed) throw new Error("LLM returned empty response — retry in a moment.");
@@ -372,8 +400,8 @@ highlights = strengths WITH evidence (company, metric, transferable). Never copy
 expected_concerns = REAL gaps only. Do NOT flag if profile covers: Jira, 0→1, platform PM, B2B, 10+ yrs PM, data-driven, transformation, tech (VK/Ozon/IRPO), security OR technology.
 Game dev: production PM transfer only — no commercial studio/live game claims.
 Languages: RU native; EN C1; DE/FR B1. language_gaps only if JD explicitly requires a language.
-Return JSON only:
-{"title":"","company":"","language":"ru|en","match_percent":0,"fit_verdict":"strong_fit|conditional_fit|poor_fit","highlights":[],"expected_concerns":[],"language_gaps":[],"hard_blockers":[],"cv_sections_to_boost":[],"matched_projects":[]}`;
+Return JSON only. All list fields must be string arrays (not objects):
+{"title":"","company":"","language":"en","match_percent":0,"fit_verdict":"strong_fit","highlights":["…"],"expected_concerns":[],"language_gaps":[],"hard_blockers":[],"cv_sections_to_boost":[],"matched_projects":[]}`;
 
 const CV_SYSTEM = `You tailor a CV using ONLY facts from the provided base CV. Reframe summary and bullets for vacancy keywords. Do not invent facts.
 Keep EN CV ~1 page (4-5 roles max, 3-5 bullets on recent role). RU CV ~2 pages max.
@@ -443,13 +471,13 @@ Deno.serve(async (req) => {
     const vacancySlice = resolved.text.slice(0, 6000);
 
     if (action === "analyze") {
-      const raw = parseJson<AnalyzeResult>(
+      const raw = normalizeAnalyzeResult(parseJson<AnalyzeResult>(
         await chat(
           ANALYZE_SYSTEM,
           (scale) => buildAnalyzeUserPrompt(knowledge, vacancySlice, scale),
           "analyze",
         ),
-      );
+      ));
       const profileContext = [
         knowledge.profile,
         knowledge.cv_en,
