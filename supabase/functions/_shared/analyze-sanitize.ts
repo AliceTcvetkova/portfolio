@@ -147,6 +147,18 @@ const CAPABILITY_RULES: { concern: RegExp; profile: RegExp }[] = [
     concern: /security or technology|technology or security/i,
     profile: /fintech|edtech|platform|digital|technology|tech |IT ecosystem|vk|ozon|irpo|risk|governance/i,
   },
+  {
+    concern: /programme.?management|program management|no explicit programme|portfolio management role/i,
+    profile: /program|delivery manager|20\+ team|workstream|cross-functional|130\+ team|ozon|irpo|delivery governance|programme delivery/i,
+  },
+  {
+    concern: /budgeting|forecasting|contract management|budget experience|financial planning/i,
+    profile: /budget|бюджет|forecast|прогноз|contract|контракт|licen|лиценз|contractor|подряд|production budget|vendor/i,
+  },
+  {
+    concern: /interdependent projects|multiple workstreams|workstream management|parallel workstreams/i,
+    profile: /workstream|20\+ team|dependency|dependencies|interdependent|130\+ team|cross-functional|parallel|ozon|irpo/i,
+  },
 ];
 
 const OR_SEGMENT_PROFILE: { segment: RegExp; profile: RegExp }[] = [
@@ -164,6 +176,18 @@ const OR_SEGMENT_PROFILE: { segment: RegExp; profile: RegExp }[] = [
   {
     segment: /security|infosec|cyber/i,
     profile: /fintech|risk|infosec|compliance|governance|regulatory|44-fz|legal|security|риск/i,
+  },
+  {
+    segment: /programme management|program management/i,
+    profile: /program|delivery|20\+ team|workstream|130\+ team|ozon|irpo/i,
+  },
+  {
+    segment: /budgeting|forecasting|contract management/i,
+    profile: /budget|бюджет|forecast|contract|licen|лиценз|contractor|подряд/i,
+  },
+  {
+    segment: /workstream|interdependent projects/i,
+    profile: /workstream|dependency|dependencies|20\+ team|130\+ team|ozon|irpo/i,
   },
 ];
 

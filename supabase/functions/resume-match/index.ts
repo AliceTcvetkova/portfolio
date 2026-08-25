@@ -397,7 +397,7 @@ function buildCvUserPrompt(
 const ANALYZE_SYSTEM = `Match vacancy to candidate using ONLY profile/projects. Never invent facts. locus_chamber/eco_clean_map = educational demos, not employment.
 
 highlights = strengths WITH evidence (company, metric, transferable). Never copy JD requirements into highlights.
-expected_concerns = REAL gaps only. Do NOT flag if profile covers: Jira, 0→1, platform PM, B2B, 10+ yrs PM, data-driven, transformation, tech (VK/Ozon/IRPO), security OR technology.
+expected_concerns = REAL gaps only. Do NOT flag if profile covers: Jira, 0→1, platform PM, B2B, 10+ yrs PM, data-driven, transformation, tech (VK/Ozon/IRPO), security OR technology, programme/delivery management (Ozon 20+ teams/workstreams, IRPO 130+ teams — title PM is OK), budgeting/forecasting/contracts (Erich Krause, IRPO, VTB), multi-workstream dependencies (Ozon).
 Game dev: production PM transfer only — no commercial studio/live game claims.
 Languages: RU native; EN C1; DE/FR B1. language_gaps only if JD explicitly requires a language.
 Return JSON only. All list fields must be string arrays (not objects):
