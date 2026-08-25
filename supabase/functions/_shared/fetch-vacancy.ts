@@ -33,7 +33,7 @@ async function tryDirectFetch(url: string): Promise<string | null> {
     });
     if (!res.ok) return null;
     const html = await res.text();
-    const text = stripHtml(html).slice(0, 12000);
+    const text = stripHtml(html).slice(0, 6000);
     return text.length >= 80 ? text : null;
   } catch {
     return null;

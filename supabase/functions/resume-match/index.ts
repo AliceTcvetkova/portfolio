@@ -135,45 +135,84 @@ function isGroqTokenLimitError(err: string): boolean {
     err.includes("rate_limit_exceeded") ||
     err.includes("Request too large") ||
     err.includes("tokens per minute") ||
+    err.includes("context_length") ||
+    err.includes("too many tokens") ||
+    err.includes("payload too large") ||
+    err.includes("reduce the length") ||
     err.includes("\"code\":\"rate_limit_exceeded\"")
   );
 }
 
-async function chatGroqAnalyze(
-  system: string,
-  buildUser: (scale: "normal" | "compact") => string,
-): Promise<string> {
-  try {
-    return await chatGroq(system, buildUser("normal"), { maxTokens: 1024, model: GROQ_MODEL });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (!msg.includes("Groq token limit") && !isGroqTokenLimitError(msg)) throw e;
-    return chatGroq(system, buildUser("compact"), { maxTokens: 768, model: GROQ_MODEL });
-  }
+function isRetryableGroqLimit(msg: string): boolean {
+  return msg.includes("Groq token limit") || isGroqTokenLimitError(msg);
 }
 
-async function chatGroqCv(system: string, user: string): Promise<string> {
-  return chatGroq(system, user, { maxTokens: 8192, model: GROQ_CV_MODEL });
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+type PromptScale = "compact" | "minimal";
+
+async function chatGroqAnalyze(
+  system: string,
+  buildUser: (scale: PromptScale) => string,
+): Promise<string> {
+  const attempts: { scale: PromptScale; maxTokens: number; delayMs: number }[] = [
+    { scale: "compact", maxTokens: 512, delayMs: 0 },
+    { scale: "minimal", maxTokens: 384, delayMs: 1500 },
+  ];
+
+  let lastErr: unknown;
+  for (const { scale, maxTokens, delayMs } of attempts) {
+    if (delayMs > 0) await sleep(delayMs);
+    try {
+      return await chatGroq(system, buildUser(scale), { maxTokens, model: GROQ_MODEL });
+    } catch (e) {
+      lastErr = e;
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!isRetryableGroqLimit(msg)) throw e;
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error("Groq token limit — wait a minute and retry with a shorter job description.");
+}
+
+async function chatGroqCv(system: string, user: string, compactUser: string): Promise<string> {
+  try {
+    return await chatGroq(system, user, { maxTokens: 2048, model: GROQ_CV_MODEL });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!isRetryableGroqLimit(msg)) throw e;
+    await sleep(1500);
+    return chatGroq(system, compactUser, { maxTokens: 1536, model: GROQ_CV_MODEL });
+  }
 }
 
 async function chat(
   system: string,
-  user: string | ((scale: "normal" | "compact") => string),
+  user: string | ((scale: PromptScale) => string) | { normal: string; compact: string },
   action: "analyze" | "get_cv" = "analyze",
 ): Promise<string> {
   if (LLM_PROVIDER === "groq") {
-    return action === "get_cv"
-      ? chatGroqCv(system, user as string)
-      : chatGroqAnalyze(system, user as (scale: "normal" | "compact") => string);
+    if (action === "get_cv") {
+      const prompts = user as { normal: string; compact: string };
+      return chatGroqCv(system, prompts.normal, prompts.compact);
+    }
+    return chatGroqAnalyze(system, user as (scale: PromptScale) => string);
   }
   if (GEMINI_API_KEY) {
-    const userText = typeof user === "function" ? user("normal") : user;
+    const userText = typeof user === "function"
+      ? user("compact")
+      : (user as { normal: string }).normal;
     return chatGemini(system, userText);
   }
   if (GROQ_API_KEY) {
-    return action === "get_cv"
-      ? chatGroqCv(system, user as string)
-      : chatGroqAnalyze(system, user as (scale: "normal" | "compact") => string);
+    if (action === "get_cv") {
+      const prompts = user as { normal: string; compact: string };
+      return chatGroqCv(system, prompts.normal, prompts.compact);
+    }
+    return chatGroqAnalyze(system, user as (scale: PromptScale) => string);
   }
   throw new Error(
     "No LLM key configured. Set GROQ_API_KEY (recommended for RU) or GEMINI_API_KEY in Supabase Secrets.",
@@ -204,63 +243,109 @@ function isGamedevVacancy(text: string): boolean {
   );
 }
 
-/** Keep analyze prompt under Groq free-tier TPM (~8k tokens incl. completion). */
+const CORE_PROJECT_IDS = ["ozon", "irpo", "vk", "erich_krause"];
+
+function selectProjectsForAnalyze(
+  projects: { id: string; content: string }[],
+  vacancyText: string,
+  maxCount: number,
+): { id: string; content: string }[] {
+  const byId = new Map(projects.map((p) => [p.id, p]));
+  const picked = new Map<string, { id: string; content: string }>();
+
+  for (const id of CORE_PROJECT_IDS) {
+    const project = byId.get(id);
+    if (project) picked.set(id, project);
+  }
+
+  const vLower = vacancyText.toLowerCase();
+  const extras = projects
+    .filter((p) => !picked.has(p.id))
+    .map((p) => {
+      const text = stripFrontmatter(p.content).toLowerCase();
+      const words = text.split(/\W+/).filter((w) => w.length > 4);
+      const score = words.filter((w) => vLower.includes(w)).length;
+      return { p, score };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  for (const { p } of extras) {
+    if (picked.size >= maxCount) break;
+    picked.set(p.id, p);
+  }
+
+  if (isGamedevVacancy(vacancyText)) {
+    for (const id of ["locus_chamber", "eco_clean_map"]) {
+      const project = byId.get(id);
+      if (project && !picked.has(id) && picked.size < maxCount) picked.set(id, project);
+    }
+  }
+
+  return [...picked.values()];
+}
+
+/** Groq free tier: input + max_tokens must stay under ~8k TPM per request. */
 function buildAnalyzeUserPrompt(
   knowledge: Knowledge,
   vacancyText: string,
-  scale: "normal" | "compact" = "normal",
+  scale: PromptScale = "compact",
 ): string {
-  const limits =
-    scale === "compact"
-      ? { vacancy: 2200, profile: 800, projects: 1800, projectEach: 180, gamedev: 600 }
-      : { vacancy: 3500, profile: 1200, projects: 2800, projectEach: 280, gamedev: 900 };
+  const limits = scale === "minimal"
+    ? { vacancy: 1200, profile: 450, projects: 900, projectEach: 110, gamedev: 280, projectCount: 4 }
+    : { vacancy: 1800, profile: 650, projects: 1300, projectEach: 150, gamedev: 450, projectCount: 6 };
 
   const vacancy = compactText(vacancyText, limits.vacancy);
   const profile = compactText(stripFrontmatter(knowledge.profile), limits.profile);
-  const projects = knowledge.projects
-    .map((p) => `### ${p.id}\n${compactProjectSummary(p.content, limits.projectEach)}`)
-    .join("\n\n")
+  const projects = selectProjectsForAnalyze(knowledge.projects, vacancyText, limits.projectCount)
+    .map((p) => `${p.id}: ${compactProjectSummary(p.content, limits.projectEach)}`)
+    .join("\n")
     .slice(0, limits.projects);
 
   let prompt =
-    `## Vacancy\n${vacancy}\n\n## Profile\n${profile}\n\n## Projects (summaries)\n${projects}`;
+    `Vacancy:\n${vacancy}\n\nProfile:\n${profile}\n\nProjects:\n${projects}`;
 
   if (isGamedevVacancy(vacancyText) && knowledge.gamedev_positioning) {
-    prompt += `\n\n## Gamedev positioning\n${compactText(knowledge.gamedev_positioning, limits.gamedev)}`;
+    prompt += `\n\nGamedev:\n${compactText(knowledge.gamedev_positioning, limits.gamedev)}`;
   }
 
   return prompt;
 }
 
-/** One LLM call for analyze — keep prompt small for Groq free TPM (8k). */
-const ANALYZE_SYSTEM = `Match a job vacancy to the candidate using ONLY the provided profile and project summaries.
-Never invent experience. case_study projects (locus_chamber, eco_clean_map) are educational demos, not employment years.
+function buildCvUserPrompt(
+  knowledge: Knowledge,
+  vacancyText: string,
+  variant: string,
+  scale: "normal" | "compact",
+): string {
+  const limits = scale === "compact"
+    ? { vacancy: 1600, cv: 2600, hints: 400, gamedev: 900, gameProjects: 500 }
+    : { vacancy: 2400, cv: 3400, hints: 600, gamedev: 1400, gameProjects: 700 };
 
-CRITICAL — highlights vs concerns:
-- highlights = ONLY candidate strengths WITH evidence (company name, metric, or "personal project/case study/transferable").
-- NEVER copy, paraphrase, or flip vacancy requirements into highlights (e.g. "proven live casual games", "strong game design", "game economy" are NOT highlights unless explicitly in profile as commercial work).
-- If JD requires live ops, game economy, shipped live casual games, deep game design — put in expected_concerns, NOT highlights.
-- expected_concerns = REAL gaps only (missing skills/experience). Do NOT list JD requirement bullets as concerns if candidate profile already covers them (e.g. Jira, 0→1 launches, platform PM, B2B, 10+ years PM, data-driven results, transformation/scaling, technology/digital product experience at VK/Ozon/IRPO).
-- NEVER put "Experience working in security or technology" (or similar) in expected_concerns — profile shows 10+ years in tech/digital products (fintech, edtech platform, IT ecosystem). Only flag dedicated cybersecurity/InfoSec career gaps when vacancy requires security-industry background specifically.
-- NEVER put phrases like "4+ years PM experience" or "Experience leading transformation" in expected_concerns when profile shows 10+ years and Ozon/IRPO/VK evidence.
+  const baseCv = variant === "russia" ? knowledge.cv_ru : knowledge.cv_en;
+  const langNote = variant === "russia"
+    ? "Write CV content in Russian (section content and bullets)."
+    : "Write CV content in English.";
 
-For game dev vacancies: emphasize production PM transfer (pipeline, dependencies, risk, scope, cross-functional delivery). Do NOT claim commercial game-studio employment or live game ownership.
+  let prompt =
+    `Variant: ${langNote}\n\nVacancy:\n${compactText(vacancyText, limits.vacancy)}\n\nBase CV:\n${compactText(baseCv, limits.cv)}\n\nHints:\n${compactText(knowledge.portfolio_sync || "", limits.hints)}`;
 
-Candidate languages: RU native; EN C1 (not C2); DE/FR B1; FI/AF elementary. Flag language_gaps only when vacancy explicitly requires a language.
+  if (isGamedevVacancy(vacancyText)) {
+    prompt +=
+      `\n\nGamedev:\n${compactText(knowledge.gamedev_positioning || "", limits.gamedev)}\n\nGame projects:\n${compactText(knowledge.game_development_projects || "", limits.gameProjects)}`;
+  }
+
+  return prompt;
+}
+
+const ANALYZE_SYSTEM = `Match vacancy to candidate using ONLY profile/projects. Never invent facts. locus_chamber/eco_clean_map = educational demos, not employment.
+
+highlights = strengths WITH evidence (company, metric, transferable). Never copy JD requirements into highlights.
+expected_concerns = REAL gaps only. Do NOT flag if profile covers: Jira, 0→1, platform PM, B2B, 10+ yrs PM, data-driven, transformation, tech (VK/Ozon/IRPO), security OR technology.
+Game dev: production PM transfer only — no commercial studio/live game claims.
+Languages: RU native; EN C1; DE/FR B1. language_gaps only if JD explicitly requires a language.
 Return JSON only:
-{
-  "title": string,
-  "company": string,
-  "language": "ru" | "en",
-  "match_percent": number,
-  "fit_verdict": "strong_fit" | "conditional_fit" | "poor_fit",
-  "highlights": string[],
-  "expected_concerns": string[],
-  "language_gaps": string[],
-  "hard_blockers": string[],
-  "cv_sections_to_boost": string[],
-  "matched_projects": string[]
-}`;
+{"title":"","company":"","language":"ru|en","match_percent":0,"fit_verdict":"strong_fit|conditional_fit|poor_fit","highlights":[],"expected_concerns":[],"language_gaps":[],"hard_blockers":[],"cv_sections_to_boost":[],"matched_projects":[]}`;
 
 const CV_SYSTEM = `You tailor a CV using ONLY facts from the provided base CV. Reframe summary and bullets for vacancy keywords. Do not invent facts.
 Keep EN CV ~1 page (4-5 roles max, 3-5 bullets on recent role). RU CV ~2 pages max.
@@ -327,7 +412,7 @@ Deno.serve(async (req) => {
     }
 
     const knowledge = await loadKnowledge();
-    const vacancySlice = resolved.text.slice(0, 10000);
+    const vacancySlice = resolved.text.slice(0, 6000);
 
     if (action === "analyze") {
       const raw = parseJson<AnalyzeResult>(
@@ -365,17 +450,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const baseCv = variant === "russia" ? knowledge.cv_ru : knowledge.cv_en;
-    const langNote = variant === "russia"
-      ? "Write CV content in Russian (section content and bullets)."
-      : "Write CV content in English.";
-
-    const cvUserPrompt =
-      `## Variant\n${langNote}\n\n## Vacancy\n${vacancySlice.slice(0, 4000)}\n\n## Base CV (adapt — do not add roles not listed here)\n${baseCv}\n\n## Tailoring hints\n${(knowledge.portfolio_sync || "").slice(0, 800)}${
-        isGamedevVacancy(vacancySlice)
-          ? `\n\n## Gamedev positioning\n${(knowledge.gamedev_positioning || "").slice(0, 2200)}\n\n## Game development projects (personal section)\n${(knowledge.game_development_projects || "").slice(0, 1000)}`
-          : ""
-      }`;
+    const cvUserPrompt = {
+      normal: buildCvUserPrompt(knowledge, vacancySlice, variant, "normal"),
+      compact: buildCvUserPrompt(knowledge, vacancySlice, variant, "compact"),
+    };
 
     type CvPayload = {
       full_name?: string;
