@@ -50,7 +50,7 @@ Dashboard → **Edge Functions → Secrets**:
 |------|--------|
 | `TELEGRAM_BOT_TOKEN` | токен от BotFather |
 | `GROQ_API_KEY` | `gsk_...` (уже может быть от resume-match) |
-| `GROQ_MODEL` | `llama-3.3-70b-versatile` |
+| `GROQ_MODEL` | `openai/gpt-oss-120b` |
 | `OUTPUT_LANGUAGE` | `en` (on_screen_text + my_thought in storyboards) |
 | `TELEGRAM_WEBHOOK_SECRET` | любая случайная строка 32+ символов |
 | `TELEGRAM_ALLOWED_CHAT_IDS` | твой chat_id (только ты) |

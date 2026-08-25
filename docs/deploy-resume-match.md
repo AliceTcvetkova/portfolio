@@ -27,6 +27,10 @@ Or:
 
 - `GROQ_API_KEY`
 - `LLM_PROVIDER` = `groq`
+- `GROQ_MODEL` = `openai/gpt-oss-20b` (analyze; optional if using code default)
+- `GROQ_CV_MODEL` = `openai/gpt-oss-120b` (CV; optional if using code default)
+
+> **Aug 2026:** Groq retired `llama-3.1-8b-instant` and `llama-3.3-70b-versatile`. Update or remove old model secrets, then redeploy.
 
 ## 4. Test
 

@@ -34,8 +34,12 @@ VPN **не гарантирует** доступ к AI Studio, даже если
 |------|--------|
 | `GROQ_API_KEY` | `gsk_...` |
 | `LLM_PROVIDER` | `groq` |
+| `GROQ_MODEL` | `openai/gpt-oss-20b` (optional; default in code) |
+| `GROQ_CV_MODEL` | `openai/gpt-oss-120b` (optional; default in code) |
 
 Gemini key **не нужен**.
+
+> **Aug 2026:** Groq снял с free tier модели `llama-3.1-8b-instant` и `llama-3.3-70b-versatile`. Актуальные замены: `openai/gpt-oss-20b` и `openai/gpt-oss-120b`.
 
 ### 3. Deploy
 

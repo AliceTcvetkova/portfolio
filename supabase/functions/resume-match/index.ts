@@ -10,9 +10,9 @@ const LLM_PROVIDER = Deno.env.get("LLM_PROVIDER") ?? (GEMINI_API_KEY ? "gemini" 
 const GEMINI_MODEL =
   Deno.env.get("GEMINI_MODEL") ?? "gemini-2.0-flash-lite";
 const GROQ_MODEL =
-  Deno.env.get("GROQ_MODEL") ?? "llama-3.1-8b-instant";
+  Deno.env.get("GROQ_MODEL") ?? "openai/gpt-oss-20b";
 const GROQ_CV_MODEL =
-  Deno.env.get("GROQ_CV_MODEL") ?? "llama-3.3-70b-versatile";
+  Deno.env.get("GROQ_CV_MODEL") ?? "openai/gpt-oss-120b";
 const KNOWLEDGE_URL =
   Deno.env.get("RESUME_KNOWLEDGE_URL") ??
   "https://alicetcvetkova.github.io/portfolio/data/resume-knowledge.json";
@@ -105,6 +105,14 @@ async function chatGroq(
 
   if (!res.ok) {
     const err = await res.text();
+    if (
+      res.status === 404 ||
+      /model.*(not found|does not exist|decommissioned|deprecated)/i.test(err)
+    ) {
+      throw new Error(
+        `Groq model unavailable (${opts.model ?? GROQ_MODEL}). Update GROQ_MODEL/GROQ_CV_MODEL secrets to openai/gpt-oss-20b and openai/gpt-oss-120b, then redeploy.`,
+      );
+    }
     if (err.includes("max completion tokens") || err.includes("json_validate_failed")) {
       throw new Error(
         "CV generation hit token limit — retry in a moment or paste a shorter vacancy excerpt.",
@@ -196,7 +204,7 @@ function isGamedevVacancy(text: string): boolean {
   );
 }
 
-/** Keep analyze prompt under Groq free-tier TPM (~6k tokens incl. completion). */
+/** Keep analyze prompt under Groq free-tier TPM (~8k tokens incl. completion). */
 function buildAnalyzeUserPrompt(
   knowledge: Knowledge,
   vacancyText: string,
@@ -224,7 +232,7 @@ function buildAnalyzeUserPrompt(
   return prompt;
 }
 
-/** One LLM call for analyze — keep prompt small for Groq free TPM (6k). */
+/** One LLM call for analyze — keep prompt small for Groq free TPM (8k). */
 const ANALYZE_SYSTEM = `Match a job vacancy to the candidate using ONLY the provided profile and project summaries.
 Never invent experience. case_study projects (locus_chamber, eco_clean_map) are educational demos, not employment years.
 

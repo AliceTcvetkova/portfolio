@@ -2,7 +2,7 @@ import { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? Deno.env.get("LLM_API_KEY");
-const GROQ_MODEL = Deno.env.get("GROQ_MODEL") ?? "llama-3.3-70b-versatile";
+const GROQ_MODEL = Deno.env.get("GROQ_MODEL") ?? "openai/gpt-oss-120b";
 const KNOWLEDGE_URL =
   Deno.env.get("REELS_KNOWLEDGE_URL") ??
   "https://alicetcvetkova.github.io/portfolio/data/reels-agent-knowledge.json";
@@ -47,9 +47,13 @@ Level 33 · life as an open-world game.
 <b>Commands:</b>
 /today — today's quests
 /storyboard — storyboard + shoot/edit skill
+/done — finished practice, get next assignment
+/retry — repeat current assignment
 /add — add tasks and regenerate
 /rewrite — revise the storyboard
-/status — current quests`;
+/status — current quests
+
+After filming: reply <b>done</b> or /done · /retry to repeat`;
 
 const RESOURCE_RULES: [string[], string, string, string, "gain" | "spend"][] = [
   [["кино", "фильм", "семей", "movie", "cinema"], "Inspiration", "+15", "gem-shimmer.gif", "gain"],
@@ -131,7 +135,7 @@ function questBonus(quests: string[]) {
   return { shoot, edit };
 }
 
-function pickVideoLearning(quests: string[], session: Session, advance = true) {
+function pickVideoLearning(quests: string[], session: Session, advance = false) {
   let shoot_i = session.skill_shoot_index % SHOOT_SKILLS.length;
   let edit_i = session.skill_edit_index % EDIT_SKILLS.length;
   const bonus = questBonus(quests);
@@ -140,8 +144,8 @@ function pickVideoLearning(quests: string[], session: Session, advance = true) {
   const shoot = SHOOT_SKILLS[shoot_i];
   const edit = EDIT_SKILLS[edit_i];
   if (advance) {
-    session.skill_shoot_index = shoot_i + 1;
-    session.skill_edit_index = edit_i + 1;
+    session.skill_shoot_index += 1;
+    session.skill_edit_index += 1;
   }
   return {
     focus_shoot: shoot.title,
@@ -153,10 +157,59 @@ function pickVideoLearning(quests: string[], session: Session, advance = true) {
       `Edit: ${edit.tip}`,
       quests[0] ? `Apply in scenes with: «${quests[0].slice(0, 40)}»` : "",
     ].filter(Boolean),
-    after_reel: `Did «${shoot.title}» + «${edit.title}» work? yes / retry`,
+    after_reel:
+      `Done with «${shoot.title}» + «${edit.title}»? Reply <b>done</b> or /done for next · /retry to repeat`,
     next_shoot: SHOOT_SKILLS[(shoot_i + 1) % SHOOT_SKILLS.length].title,
     next_edit: EDIT_SKILLS[(edit_i + 1) % EDIT_SKILLS.length].title,
   };
+}
+
+function completeVideoLearning(quests: string[], session: Session) {
+  const shoot_i = session.skill_shoot_index % SHOOT_SKILLS.length;
+  const edit_i = session.skill_edit_index % EDIT_SKILLS.length;
+  const completed = {
+    focus_shoot: SHOOT_SKILLS[shoot_i].title,
+    focus_edit: EDIT_SKILLS[edit_i].title,
+  };
+  session.skill_shoot_index += 1;
+  session.skill_edit_index += 1;
+  const next = pickVideoLearning(quests, session, false);
+  return { completed, next };
+}
+
+function parseSkillReply(text: string): "done" | "retry" | null {
+  const raw = text.trim();
+  const lower = raw.toLowerCase().replace(/[!.…]+$/g, "");
+  if (lower.startsWith("/done")) return "done";
+  if (lower.startsWith("/retry")) return "retry";
+  if (raw.length > 60) return null;
+  const retry = ["retry", "again", "repeat", "no", "нет", "ещё раз", "еще раз", "повтор", "заново"];
+  if (retry.includes(lower)) return "retry";
+  const done = ["done", "yes", "y", "ok", "okay", "готово", "да", "сделала", "сделано", "выполнила", "next", "новое"];
+  if (done.includes(lower)) return "done";
+  return null;
+}
+
+function formatVideoLearningBlock(vl: Record<string, unknown>): string {
+  const lines = [
+    "📚 <b>Practice on this Reels</b>",
+    `<b>Shoot:</b> ${vl.focus_shoot}`,
+    `   ${vl.focus_shoot_tip}`,
+    `<b>Edit:</b> ${vl.focus_edit}`,
+    `   ${vl.focus_edit_tip}`,
+  ];
+  for (const p of (vl.practice as string[]) ?? []) lines.push(`• ${p}`);
+  if (vl.after_reel) lines.push(`✅ ${vl.after_reel}`);
+  return lines.join("\n");
+}
+
+function formatSkillComplete(completed: Record<string, string>, next: Record<string, unknown>): string {
+  return [
+    "✅ <b>Practice logged</b>",
+    `Completed: ${completed.focus_shoot} + ${completed.focus_edit}`,
+    "",
+    formatVideoLearningBlock(next),
+  ].join("\n");
 }
 
 function buildPublishPack(quests: string[], fogTease = "") {
@@ -277,7 +330,7 @@ function buildTemplateStoryboard(quests: string[], xp_goal: number, session: Ses
     resource_awarded: "", sticker_suggestion: "sticker_new_quest_open.png", learn_note: "",
   });
 
-  const video_learning = pickVideoLearning(quests, session, true);
+  const video_learning = pickVideoLearning(quests, session, false);
   if (scenes[0]) scenes[0].learn_note = `📚 Shoot: ${video_learning.focus_shoot_tip}`;
   if (scenes[1]) scenes[1].learn_note = `📚 Edit: ${video_learning.focus_edit_tip}`;
 
@@ -309,7 +362,7 @@ async function generateStoryboard(session: Session) {
     const raw = await chatGroq(kb.system_prompt, userMsg);
     const data = extractJson(raw) as Record<string, unknown>;
     data._mode = "llm";
-    data.video_learning = pickVideoLearning(quests, session, true);
+    data.video_learning = pickVideoLearning(quests, session, false);
     if (!data.publish) {
       data.publish = buildPublishPack(quests, String(data.fog_tease ?? ""));
     }
@@ -463,7 +516,29 @@ async function runStoryboard(chatId: number, session: Session, supabase: Supabas
   session.revision_notes = "";
   await saveSession(supabase, session);
   await sendMessage(chatId, formatStoryboard(data));
-  await sendMessage(chatId, "✏️ /add — add tasks · /rewrite — revise");
+  await sendMessage(chatId, "✏️ /add — add tasks · /rewrite — revise · /done — next practice");
+}
+
+async function runSkillDone(chatId: number, session: Session, supabase: SupabaseClient) {
+  if (!session.quests.length) {
+    await sendMessage(chatId, "Send /today first");
+    return;
+  }
+  const { completed, next } = completeVideoLearning(session.quests, session);
+  if (session.last_storyboard) session.last_storyboard.video_learning = next;
+  await saveSession(supabase, session);
+  await sendMessage(chatId, formatSkillComplete(completed, next));
+}
+
+async function runSkillRetry(chatId: number, session: Session, supabase: SupabaseClient) {
+  if (!session.quests.length) {
+    await sendMessage(chatId, "Send /today first");
+    return;
+  }
+  const next = pickVideoLearning(session.quests, session, false);
+  if (session.last_storyboard) session.last_storyboard.video_learning = next;
+  await saveSession(supabase, session);
+  await sendMessage(chatId, formatVideoLearningBlock(next));
 }
 
 export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseClient) {
@@ -553,6 +628,26 @@ export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseCli
     }
     session.revision_notes = text.replace(/^\/rewrite\s*/, "").trim();
     await runStoryboard(chatId, session, supabase);
+    return;
+  }
+
+  if (text.startsWith("/done")) {
+    await runSkillDone(chatId, session, supabase);
+    return;
+  }
+
+  if (text.startsWith("/retry")) {
+    await runSkillRetry(chatId, session, supabase);
+    return;
+  }
+
+  const skillReply = parseSkillReply(text);
+  if (skillReply === "done") {
+    await runSkillDone(chatId, session, supabase);
+    return;
+  }
+  if (skillReply === "retry") {
+    await runSkillRetry(chatId, session, supabase);
     return;
   }
 
