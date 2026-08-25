@@ -85,6 +85,8 @@ async function chatGroq(
   if (!GROQ_API_KEY) {
     throw new Error("GROQ_API_KEY not set");
   }
+  const model = opts.model ?? GROQ_MODEL;
+  const useJsonMode = !model.includes("gpt-oss");
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -92,10 +94,10 @@ async function chatGroq(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: opts.model ?? GROQ_MODEL,
+      model,
       temperature: 0.2,
       max_tokens: opts.maxTokens ?? 2048,
-      response_format: { type: "json_object" },
+      ...(useJsonMode ? { response_format: { type: "json_object" } } : {}),
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
@@ -110,13 +112,11 @@ async function chatGroq(
       /model.*(not found|does not exist|decommissioned|deprecated)/i.test(err)
     ) {
       throw new Error(
-        `Groq model unavailable (${opts.model ?? GROQ_MODEL}). Update GROQ_MODEL/GROQ_CV_MODEL secrets to openai/gpt-oss-20b and openai/gpt-oss-120b, then redeploy.`,
+        `Groq model unavailable (${model}). Update GROQ_MODEL/GROQ_CV_MODEL secrets to openai/gpt-oss-20b and openai/gpt-oss-120b, then redeploy.`,
       );
     }
     if (err.includes("max completion tokens") || err.includes("json_validate_failed")) {
-      throw new Error(
-        "CV generation hit token limit — retry in a moment or paste a shorter vacancy excerpt.",
-      );
+      throw new Error(`Groq request rejected (${model}): ${err.slice(0, 220)}`);
     }
     if (isGroqTokenLimitError(err)) {
       throw new Error(

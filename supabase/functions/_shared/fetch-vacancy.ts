@@ -46,7 +46,7 @@ async function tryJinaReader(url: string): Promise<string | null> {
       headers: { Accept: "text/plain", ...FETCH_HEADERS },
     });
     if (!res.ok) return null;
-    const text = (await res.text()).trim().slice(0, 12000);
+    const text = (await res.text()).trim().slice(0, 6000);
     return text.length >= 80 ? text : null;
   } catch {
     return null;
@@ -61,7 +61,7 @@ async function tryAllOrigins(url: string): Promise<string | null> {
     );
     if (!res.ok) return null;
     const body = await res.text();
-    const text = stripHtml(body).slice(0, 12000);
+    const text = stripHtml(body).slice(0, 6000);
     return text.length >= 80 ? text : null;
   } catch {
     return null;
