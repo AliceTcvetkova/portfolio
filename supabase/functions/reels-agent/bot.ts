@@ -1,4 +1,9 @@
 import { SupabaseClient } from "jsr:@supabase/supabase-js@2";
+import {
+  type ContentBrief,
+  briefFromQuests,
+  parseReelCommand,
+} from "./content_brief.ts";
 
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? Deno.env.get("LLM_API_KEY");
@@ -42,18 +47,21 @@ const OUTPUT_LANGUAGE = Deno.env.get("OUTPUT_LANGUAGE") ?? "en";
 
 const WELCOME = `Hi! I'm <b>Reels Agent</b> for @sashaiamdrawing 🎬
 
-Level 33 · life as an open-world game.
+Three content lines · one universe: 🎮 Life as a Game · 🎨 Why I Create · 🍵 Little Things
 
 <b>Commands:</b>
-/today — today's quests
-/storyboard — storyboard + shoot/edit skill
-/done — finished practice, get next assignment
-/retry — repeat current assignment
-/add — add tasks and regenerate
-/rewrite — revise the storyboard
-/status — current quests
+/reel [type] [duration] [mood] + input → <b>3 variants</b>
+/storyboard — diary mode (/today quests)
+/today · /add · /rewrite · /done · /retry · /status
 
-After filming: reply <b>done</b> or /done · /retry to repeat`;
+<b>Types:</b> diary · talking · detail · hybrid · surprise
+
+<b>Example:</b>
+/reel talking 30 vulnerable
+Why do I gamify my life?
+
+/reel
+Bought new brushes — nowhere to store them`;
 
 const RESOURCE_RULES: [string[], string, string, string, "gain" | "spend"][] = [
   [["кино", "фильм", "семей", "movie", "cinema"], "Inspiration", "+15", "gem-shimmer.gif", "gain"],
@@ -344,37 +352,75 @@ function buildTemplateStoryboard(quests: string[], xp_goal: number, session: Ses
   };
 }
 
-async function generateStoryboard(session: Session) {
+async function generateReel(session: Session, brief: ContentBrief) {
   const { quests, xp_goal, revision_notes, last_storyboard } = session;
-  if (!quests.length) throw new Error("Empty quests");
+  const practiceLines = quests.length ? quests : brief.input_text.split("\n").filter(Boolean);
 
-  if (!GROQ_API_KEY) return buildTemplateStoryboard(quests, xp_goal, session);
+  if (!GROQ_API_KEY) {
+    if (brief.content_type === "diary" && quests.length) {
+      const fb = buildTemplateStoryboard(quests, xp_goal, session);
+      return ensureVariants(fb, brief);
+    }
+    throw new Error("GROQ_API_KEY not set");
+  }
 
   try {
     const kb = await loadKnowledge();
-    let userMsg = `Knowledge base:\n${kb.knowledge_text}\n\n---\nToday's quests:\n${quests.map((q) => `- ${q}`).join("\n")}\nSession focus: ${xp_goal}\nOutput language for on_screen_text and my_thought: ${OUTPUT_LANGUAGE}\n`;
+    let userMsg = `Knowledge base:\n${kb.knowledge_text}\n\n---\nCONTENT BRIEF:\n`;
+    userMsg += `- content_type: ${brief.content_type}\n- input: ${brief.input_text}\n`;
+    userMsg += `- mood: ${brief.mood}\n- goal: ${brief.goal}\n- format: ${brief.format_pref}\n- duration: ${brief.duration} sec\n`;
+    if (quests.length) userMsg += `\nSaved quests:\n${quests.map((q) => `- ${q}`).join("\n")}\n`;
+    userMsg += `\nSession focus: ${xp_goal}\nOutput language: ${OUTPUT_LANGUAGE}\n`;
     if (revision_notes) userMsg += `\nUser revision:\n${revision_notes}\n`;
-    if (last_storyboard?.scenes) {
-      userMsg += `\nPrevious scenes: ${JSON.stringify((last_storyboard.scenes as unknown[]).slice(0, 4))}\n`;
+    if (last_storyboard?.variants) {
+      const labels = (last_storyboard.variants as Record<string, string>[]).map((v) => v.label).slice(0, 3);
+      userMsg += `\nPrevious variants: ${labels.join(", ")}\n`;
     }
-    userMsg += `\nReturn JSON: total_seconds, player_level, resources_gained[], fog_tease, scenes[] (each scene MUST include my_thought), agent_notes, video_learning{focus_shoot, focus_shoot_tip, focus_edit, focus_edit_tip, practice[], after_reel}, publish{hook_pick, hook_alternatives[], cover_suggestion, caption_first_line, caption, hashtags[], hashtag_note, bonus_tips[]} — video assignments only, NO course or platform names. publish required per publish_marketing.md.`;
+    userMsg += `\nReturn JSON per system prompt: content_type, pillar, detected_story, variants[3] (id, label, tone, mechanic, hook, scenes[], publish), bridge_suggestion, video_learning{}, agent_notes. Diary: resources_gained[], fog_tease, player_level 33. NO course names. JSON only.`;
 
     const raw = await chatGroq(kb.system_prompt, userMsg);
     const data = extractJson(raw) as Record<string, unknown>;
     data._mode = "llm";
-    data.video_learning = pickVideoLearning(quests, session, false);
-    if (!data.publish) {
-      data.publish = buildPublishPack(quests, String(data.fog_tease ?? ""));
-    }
-    if (!data.scenes) throw new Error("No scenes");
-    return data;
+    data.video_learning = pickVideoLearning(practiceLines, session, false);
+    const out = ensureVariants(data, brief);
+    if (!(out.variants as unknown[])?.length) throw new Error("No variants");
+    return out;
   } catch (e) {
     console.error("LLM fallback:", e);
-    const fb = buildTemplateStoryboard(quests, xp_goal, session);
-    fb._mode = "fallback";
-    fb._llm_error = String(e).slice(0, 150);
-    return fb;
+    if (brief.content_type === "diary" && quests.length) {
+      const fb = buildTemplateStoryboard(quests, xp_goal, session);
+      fb._mode = "fallback";
+      fb._llm_error = String(e).slice(0, 150);
+      return ensureVariants(fb, brief);
+    }
+    throw e;
   }
+}
+
+async function generateStoryboard(session: Session) {
+  const brief = briefFromQuests(session.quests, session.xp_goal);
+  return generateReel(session, brief);
+}
+
+function ensureVariants(data: Record<string, unknown>, brief: ContentBrief) {
+  if (data.variants) return data;
+  const scenes = (data.scenes as Record<string, string>[]) ?? [];
+  const publish = (data.publish as Record<string, unknown>) ?? {};
+  data.variants = [{
+    id: "variant_a",
+    label: "Game session",
+    tone: brief.mood,
+    mechanic: "session_recap",
+    hook: scenes[0]?.on_screen_text ?? "",
+    total_seconds: data.total_seconds ?? brief.duration,
+    scenes,
+    publish,
+  }];
+  data.content_type ??= brief.content_type;
+  data.pillar ??= "life_as_game";
+  data.detected_story ??= brief.input_text.slice(0, 160);
+  data.duration ??= brief.duration;
+  return data;
 }
 
 function splitMessage(text: string, limit = 4096): string[] {
@@ -392,12 +438,20 @@ function splitMessage(text: string, limit = 4096): string[] {
 }
 
 function formatStoryboard(data: Record<string, unknown>): string {
+  const PILLAR: Record<string, string> = {
+    life_as_game: "🎮 Life as a Game",
+    why_i_create: "🎨 Why I Create",
+    little_things: "🍵 Little Things",
+  };
+  const ctype = String(data.content_type ?? "diary");
+  const pillar = PILLAR[String(data.pillar ?? "")] ?? String(data.pillar ?? "");
   const lines: string[] = [
-    `🎬 <b>Reels · Level ${data.player_level ?? 33} · game session</b>`,
-    `⏱ ${data.total_seconds ?? 35} sec`,
+    `🎬 <b>Reels · ${ctype} · ${pillar}</b>`,
+    `⏱ ${data.duration ?? data.total_seconds ?? 30} sec`,
     "",
   ];
   if (data._mode === "llm") lines.push("🤖 <i>AI · Groq (Supabase)</i>", "");
+  if (data.detected_story) lines.push(`📖 <b>Story:</b> ${data.detected_story}`, "");
 
   const vl = data.video_learning as Record<string, unknown> | undefined;
   if (vl) {
@@ -416,44 +470,42 @@ function formatStoryboard(data: Record<string, unknown>): string {
   const gained = (data.resources_gained as Record<string, string>[]) ?? [];
   if (gained.length) {
     lines.push("<b>Session resources:</b>");
-    for (const r of gained) {
-      lines.push(`• ${r.amount} ${r.resource} ← ${r.from_quest}`);
+    for (const r of gained) lines.push(`• ${r.amount} ${r.resource} ← ${r.from_quest}`);
+    lines.push("");
+  }
+  if (data.fog_tease) lines.push(`🌫 <b>Fog:</b> ${data.fog_tease}`, "");
+
+  const variants = (data.variants as Record<string, unknown>[]) ?? [];
+  if (variants.length) {
+    variants.slice(0, 3).forEach((v, i) => {
+      const letter = String.fromCharCode(65 + i);
+      lines.push(`━━ <b>Variant ${letter}: ${v.label}</b>`);
+      lines.push(`<i>${v.tone} · ${v.mechanic}</i>`);
+      if (v.hook) lines.push(`🪝 ${v.hook}`);
+      const pub = v.publish as Record<string, unknown> | undefined;
+      if (pub?.hook_pick) lines.push(`<b>Hook:</b> ${pub.hook_pick}`);
+      if (pub?.caption_first_line) lines.push(`<b>Caption:</b> «${pub.caption_first_line}»`);
+      for (const scene of (v.scenes as Record<string, string>[]) ?? []) {
+        lines.push(`<b>${scene.timecode}</b> — ${scene.label}`);
+        if (scene.on_screen_text) lines.push(`   📱 «${scene.on_screen_text}»`);
+        if (scene.my_thought) lines.push(`   🎙 «${scene.my_thought}»`);
+        if (scene.shot_description) lines.push(`   🎥 ${scene.shot_description}`);
+      }
+      lines.push("");
+    });
+  } else {
+    lines.push("<b>Storyboard</b>");
+    for (const scene of (data.scenes as Record<string, string>[]) ?? []) {
+      lines.push(`<b>${scene.timecode}</b> — ${scene.label}`);
+      if (scene.my_thought) lines.push(`   🎙 «${scene.my_thought}»`);
     }
     lines.push("");
   }
-  if (data.fog_tease) lines.push(`🌫 <b>Fog of war:</b> ${data.fog_tease}`, "");
 
-  const pub = data.publish as Record<string, unknown> | undefined;
-  if (pub) {
-    lines.push("📣 <b>Hook & publish</b>");
-    if (pub.hook_pick) lines.push(`<b>Hook:</b> ${pub.hook_pick}`);
-    for (const alt of (pub.hook_alternatives as string[]) ?? []) lines.push(`   ↳ ${alt}`);
-    if (pub.cover_suggestion) lines.push(`<b>Cover:</b> ${pub.cover_suggestion}`);
-    if (pub.caption_first_line) lines.push(`<b>Caption line 1:</b> «${pub.caption_first_line}»`);
-    if (pub.caption) lines.push(`<b>Caption:</b>\n${pub.caption}`);
-    const tags = (pub.hashtags as string[]) ?? [];
-    if (tags.length) lines.push(`<b>Hashtags:</b> ${tags.join(" ")}`);
-    if (pub.hashtag_note) lines.push(`   <i>${pub.hashtag_note}</i>`);
-    for (const tip of (pub.bonus_tips as string[]) ?? []) lines.push(`💡 ${tip}`);
-    lines.push("");
-  }
-
-  lines.push("<b>Storyboard</b>");
-  for (const [i, scene] of ((data.scenes as Record<string, string>[]) ?? []).entries()) {
-    lines.push(`<b>${i + 1}. ${scene.timecode}</b> — ${scene.label}`);
-    if (scene.on_screen_text) lines.push(`   📱 «${scene.on_screen_text}»`);
-    if (scene.my_thought) lines.push(`   🎙 «${scene.my_thought}»`);
-    if (scene.shot_description) lines.push(`   🎥 ${scene.shot_description}`);
-    if (scene.edit_note) lines.push(`   ✂️ ${scene.edit_note}`);
-    if (scene.learn_note) lines.push(`   ${scene.learn_note}`);
-    if (scene.resource_awarded) lines.push(`   ⭐ ${scene.resource_awarded}`);
-    if (scene.sticker_suggestion) lines.push(`   🏷 ${scene.sticker_suggestion}`);
-    lines.push("");
-  }
+  if (data.bridge_suggestion) lines.push(`🌉 <b>Bridge:</b> ${data.bridge_suggestion}`, "");
   if (data.agent_notes) lines.push(`💡 ${data.agent_notes}`);
-  if (data._mode === "fallback") {
-    lines.push("", "<i>⚠️ AI unavailable — simplified storyboard. Try /storyboard in a minute.</i>");
-  }
+  if (data._mode === "fallback") lines.push("", "<i>⚠️ AI unavailable — try again.</i>");
+  lines.push("", "<i>Pick a variant · /done · /reel for new topic</i>");
   return lines.join("\n").trim();
 }
 
@@ -509,7 +561,20 @@ async function saveSession(supabase: SupabaseClient, session: Session) {
   });
 }
 
+async function runReel(chatId: number, session: Session, brief: ContentBrief, supabase: SupabaseClient) {
+  await sendMessage(chatId, "⏳ Reading input · generating 3 variants…");
+  const data = await generateReel(session, brief);
+  session.last_storyboard = data;
+  session.revision_notes = "";
+  await saveSession(supabase, session);
+  await sendMessage(chatId, formatStoryboard(data));
+}
+
 async function runStoryboard(chatId: number, session: Session, supabase: SupabaseClient) {
+  if (!session.quests.length) {
+    await sendMessage(chatId, "Send /today first");
+    return;
+  }
   await sendMessage(chatId, "⏳ Generating storyboard…");
   const data = await generateStoryboard(session);
   session.last_storyboard = data;
@@ -520,22 +585,28 @@ async function runStoryboard(chatId: number, session: Session, supabase: Supabas
 }
 
 async function runSkillDone(chatId: number, session: Session, supabase: SupabaseClient) {
-  if (!session.quests.length) {
-    await sendMessage(chatId, "Send /today first");
+  const ctx = session.quests.length
+    ? session.quests
+    : [String(session.last_storyboard?.detected_story ?? "practice")];
+  if (!ctx[0]) {
+    await sendMessage(chatId, "Send /today or /reel first");
     return;
   }
-  const { completed, next } = completeVideoLearning(session.quests, session);
+  const { completed, next } = completeVideoLearning(ctx, session);
   if (session.last_storyboard) session.last_storyboard.video_learning = next;
   await saveSession(supabase, session);
   await sendMessage(chatId, formatSkillComplete(completed, next));
 }
 
 async function runSkillRetry(chatId: number, session: Session, supabase: SupabaseClient) {
-  if (!session.quests.length) {
-    await sendMessage(chatId, "Send /today first");
+  const ctx = session.quests.length
+    ? session.quests
+    : [String(session.last_storyboard?.detected_story ?? "practice")];
+  if (!ctx[0]) {
+    await sendMessage(chatId, "Send /today or /reel first");
     return;
   }
-  const next = pickVideoLearning(session.quests, session, false);
+  const next = pickVideoLearning(ctx, session, false);
   if (session.last_storyboard) session.last_storyboard.video_learning = next;
   await saveSession(supabase, session);
   await sendMessage(chatId, formatVideoLearningBlock(next));
@@ -598,11 +669,17 @@ export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseCli
   }
 
   if (text.startsWith("/storyboard")) {
-    if (!session.quests.length) {
-      await sendMessage(chatId, "Send /today first");
+    await runStoryboard(chatId, session, supabase);
+    return;
+  }
+
+  if (text.startsWith("/reel")) {
+    const brief = parseReelCommand(text);
+    if (!brief.input_text.trim()) {
+      await sendMessage(chatId, "Send input after /reel.\n\n/reel talking 30 thoughtful\nWhy do I draw?");
       return;
     }
-    await runStoryboard(chatId, session, supabase);
+    await runReel(chatId, session, brief, supabase);
     return;
   }
 
