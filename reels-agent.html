@@ -118,6 +118,29 @@
       </div>
     </section>
 
+    <section id="reels-agent-progress">
+      <h2>Live game progress</h2>
+      <p class="reels-agent__section-intro">Resource totals and active quest investment — updated when I log a session in Telegram (<code>/log</code>, <code>/log apply</code> after storyboard).</p>
+      <div class="reels-agent__progress">
+        <div id="reels-progress-meta" class="reels-agent__progress-meta"></div>
+        <div class="reels-agent__progress-split">
+          <div>
+            <h3>Resources</h3>
+            <div id="reels-progress-resources"></div>
+          </div>
+          <div>
+            <h3>Unlocks</h3>
+            <div id="reels-progress-unlocks"></div>
+          </div>
+        </div>
+        <div id="reels-progress-goals" class="reels-agent__progress-goals"></div>
+        <div class="reels-agent__progress-log-wrap">
+          <h3>Recent log</h3>
+          <div id="reels-progress-log"></div>
+        </div>
+      </div>
+    </section>
+
     <section class="reels-agent__decisions">
       <h2>Product decisions</h2>
       <div class="reels-agent__layer-grid">
@@ -183,6 +206,7 @@
       <p><strong>MVP live</strong> — I use it in Telegram daily. One allowlisted user, no public bot link on this site.</p>
       <ul class="reels-agent__bullets reels-agent__bullets--compact">
         <li>Storyboard in ~30 sec vs. half an hour of manual planning</li>
+        <li>Resource ledger in Telegram — <code>/log</code> remembers totals; portfolio page shows live bars</li>
         <li>8 Markdown files → compact JSON; updates when I change my game rules</li>
         <li>What I’d prove next: publish Reels from agent output and measure reach vs. my baseline</li>
       </ul>
@@ -193,6 +217,8 @@
     <p>© Alice Tsvetkova · Product Manager</p>
   </footer>
 
+  <script src="js/reels-agent-config.js"></script>
+  <script src="js/reels-agent-progress.js"></script>
   <script src="js/i18n/dict-ru.js"></script>
   <script src="js/i18n/dict-ru-attrs.js"></script>
   <script src="js/site-i18n.js"></script>

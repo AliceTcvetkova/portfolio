@@ -4,6 +4,16 @@ import {
   briefFromQuests,
   parseReelCommand,
 } from "./content_brief.ts";
+import {
+  type PlayerProgress,
+  executeLog,
+  formatProgressSummary,
+  goalPercent,
+  mergeProgress,
+  parseLogCommand,
+  progressContextForLlm,
+  syncPublicProgress,
+} from "./player_progress.ts";
 
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? Deno.env.get("LLM_API_KEY");
@@ -34,6 +44,7 @@ type Session = {
   skill_edit_index: number;
   awaiting_today: boolean;
   awaiting_add: boolean;
+  player_progress: PlayerProgress;
 };
 
 type Knowledge = {
@@ -52,7 +63,7 @@ Three content lines · one universe: 🎮 Life as a Game · 🎨 Why I Create ·
 <b>Commands:</b>
 /reel [type] [duration] [mood] + input → <b>3 variants</b>
 /storyboard — diary mode (/today quests)
-/today · /add · /rewrite · /done · /retry · /status
+/today · /add · /rewrite · /done · /retry · /status · /progress · /log
 
 <b>Types:</b> diary · talking · detail · hybrid · surprise
 
@@ -342,12 +353,23 @@ function buildTemplateStoryboard(quests: string[], xp_goal: number, session: Ses
   if (scenes[0]) scenes[0].learn_note = `📚 Shoot: ${video_learning.focus_shoot_tip}`;
   if (scenes[1]) scenes[1].learn_note = `📚 Edit: ${video_learning.focus_edit_tip}`;
 
+  const pp = session.player_progress;
+  const song = pp.goals.song_cover;
+  const songPct = goalPercent(song);
+  const fogTease = pp.unlocks.mug.locked
+    ? `Mug 🔒 — ${pp.unlocks.mug.reason_ru ?? pp.unlocks.mug.reason}`
+    : "Mug unlocked ☕";
+  const songNote =
+    `Song cover ${songPct}% — Insp ${song.invested.Inspiration ?? 0}/${song.targets.Inspiration}, ` +
+    `Exp ${song.invested.Experience ?? 0}/${song.targets.Experience}, ` +
+    `Energy ${song.invested.Energy ?? 0}/${song.targets.Energy}`;
+
   return {
     total_seconds: 35, player_level: 33, daily_goal_xp: xp_goal,
     projected_xp: resources_gained.length * 15,
-    resources_gained, fog_tease: "Mug 🔒 — unlocks after I land a job",
-    agent_notes: "Song cover: needs 150 Inspiration + 200 Experience + 200 Energy → +50 Reputation.",
-    video_learning, publish: buildPublishPack(quests, "Mug 🔒 — unlocks after I land a job"),
+    resources_gained, fog_tease: fogTease,
+    agent_notes: `${songNote}. /log apply after filming to save totals.`,
+    video_learning, publish: buildPublishPack(quests, fogTease),
     scenes, _mode: "template",
   };
 }
@@ -370,6 +392,7 @@ async function generateReel(session: Session, brief: ContentBrief) {
     userMsg += `- content_type: ${brief.content_type}\n- input: ${brief.input_text}\n`;
     userMsg += `- mood: ${brief.mood}\n- goal: ${brief.goal}\n- format: ${brief.format_pref}\n- duration: ${brief.duration} sec\n`;
     if (quests.length) userMsg += `\nSaved quests:\n${quests.map((q) => `- ${q}`).join("\n")}\n`;
+    userMsg += `\n${progressContextForLlm(session.player_progress)}\n`;
     userMsg += `\nSession focus: ${xp_goal}\nOutput language: ${OUTPUT_LANGUAGE}\n`;
     if (revision_notes) userMsg += `\nUser revision:\n${revision_notes}\n`;
     if (last_storyboard?.variants) {
@@ -537,12 +560,14 @@ async function loadSession(supabase: SupabaseClient, chatId: number): Promise<Se
       skill_edit_index: data.skill_edit_index ?? 0,
       awaiting_today: data.awaiting_today ?? false,
       awaiting_add: data.awaiting_add ?? false,
+      player_progress: mergeProgress(data.player_progress),
     };
   }
   return {
     chat_id: chatId, quests: [], xp_goal: 100, revision_notes: "",
     last_storyboard: null, skill_shoot_index: 0, skill_edit_index: 0,
     awaiting_today: false, awaiting_add: false,
+    player_progress: mergeProgress(null),
   };
 }
 
@@ -557,8 +582,26 @@ async function saveSession(supabase: SupabaseClient, session: Session) {
     skill_edit_index: session.skill_edit_index,
     awaiting_today: session.awaiting_today,
     awaiting_add: session.awaiting_add,
+    player_progress: session.player_progress,
     updated_at: new Date().toISOString(),
   });
+  try {
+    await syncPublicProgress(supabase, session.player_progress);
+  } catch (e) {
+    console.warn("syncPublicProgress:", e);
+  }
+}
+
+async function runLog(chatId: number, session: Session, supabase: SupabaseClient, text: string) {
+  const parsed = parseLogCommand(text);
+  if (!parsed) {
+    await sendMessage(chatId, "Usage: /log +15 experience");
+    return;
+  }
+  const storyboardResources = (session.last_storyboard?.resources_gained as Record<string, unknown>[]) ?? [];
+  const reply = executeLog(session.player_progress, parsed.action, parsed.payload, storyboardResources);
+  await saveSession(supabase, session);
+  await sendMessage(chatId, reply);
 }
 
 async function runReel(chatId: number, session: Session, brief: ContentBrief, supabase: SupabaseClient) {
@@ -664,7 +707,21 @@ export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseCli
 
   if (text.startsWith("/status")) {
     const list = session.quests.map((q) => `• ${q}`).join("\n") || "(empty)";
-    await sendMessage(chatId, `<b>Quests:</b>\n${list}\n\nFocus: ${session.xp_goal}`);
+    const hasSb = session.last_storyboard ? "yes" : "no";
+    await sendMessage(
+      chatId,
+      `<b>Quests:</b>\n${list}\n\nFocus: ${session.xp_goal} · Storyboard: ${hasSb}\n\n${formatProgressSummary(session.player_progress)}`,
+    );
+    return;
+  }
+
+  if (text.startsWith("/progress")) {
+    await sendMessage(chatId, formatProgressSummary(session.player_progress));
+    return;
+  }
+
+  if (text.startsWith("/log") || parseLogCommand(text)) {
+    await runLog(chatId, session, supabase, text);
     return;
   }
 

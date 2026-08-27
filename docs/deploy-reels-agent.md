@@ -23,6 +23,14 @@ Supabase Dashboard → **SQL Editor** → выполни файл:
 
 `portfolio/supabase/phase7-reels-agent.sql`
 
+Optional (content modes): `phase8-reels-agent-content-modes.sql`
+
+**Player progress** (resource ledger + portfolio widget):
+
+`portfolio/supabase/phase9-reels-agent-player-progress.sql`
+
+Adds `player_progress` jsonb on sessions + public table `reels_agent_public_progress` (read-only for portfolio page).
+
 ---
 
 ## Шаг 2 — Knowledge на GitHub Pages
