@@ -24,7 +24,11 @@ export function parseReelCommand(text: string): ContentBrief {
     return { content_type: "surprise", input_text: raw, mood: "cozy", goal: "tell a story", format_pref: "mixed", duration: 30 };
   }
   const rest = raw.slice(5).trim();
-  const tokens = rest.split(/\s+/);
+  const nl = rest.indexOf("\n");
+  const paramLine = nl >= 0 ? rest.slice(0, nl).trim() : rest;
+  const bodyAfterNewline = nl >= 0 ? rest.slice(nl + 1).trim() : "";
+
+  const tokens = paramLine.split(/\s+/).filter(Boolean);
   let content_type = "surprise";
   let mood = "cozy";
   let duration = 30;
@@ -41,8 +45,17 @@ export function parseReelCommand(text: string): ContentBrief {
     mood = tokens[i].toLowerCase();
     i++;
   }
-  const input_text = tokens.slice(i).join(" ").trim();
+  let input_text = tokens.slice(i).join(" ").trim();
+  if (bodyAfterNewline) {
+    input_text = input_text ? `${input_text}\n${bodyAfterNewline}` : bodyAfterNewline;
+  }
   return { content_type, input_text, mood, goal: "tell a story", format_pref: "mixed", duration };
+}
+
+export type PendingReelBrief = ContentBrief & { _awaiting?: boolean };
+
+export function isAwaitingReelInput(data: unknown): data is PendingReelBrief {
+  return !!data && typeof data === "object" && (data as PendingReelBrief)._awaiting === true;
 }
 
 export function briefFromQuests(quests: string[], xp_goal = 100): ContentBrief {

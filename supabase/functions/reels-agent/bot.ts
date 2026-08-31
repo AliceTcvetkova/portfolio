@@ -2,6 +2,7 @@ import { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import {
   type ContentBrief,
   briefFromQuests,
+  isAwaitingReelInput,
   parseReelCommand,
 } from "./content_brief.ts";
 import {
@@ -45,6 +46,7 @@ type Session = {
   awaiting_today: boolean;
   awaiting_add: boolean;
   player_progress: PlayerProgress;
+  content_brief: Record<string, unknown> | null;
 };
 
 type Knowledge = {
@@ -383,7 +385,7 @@ async function generateReel(session: Session, brief: ContentBrief) {
       const fb = buildTemplateStoryboard(quests, xp_goal, session);
       return ensureVariants(fb, brief);
     }
-    throw new Error("GROQ_API_KEY not set");
+    return buildTalkingFallback(brief, session);
   }
 
   try {
@@ -399,14 +401,14 @@ async function generateReel(session: Session, brief: ContentBrief) {
       const labels = (last_storyboard.variants as Record<string, string>[]).map((v) => v.label).slice(0, 3);
       userMsg += `\nPrevious variants: ${labels.join(", ")}\n`;
     }
-    userMsg += `\nReturn JSON per system prompt: content_type, pillar, detected_story, variants[3] (id, label, tone, mechanic, hook, scenes[], publish), bridge_suggestion, video_learning{}, agent_notes. Diary: resources_gained[], fog_tease, player_level 33. NO course names. JSON only.`;
+    userMsg += `\nReturn JSON per system prompt: content_type, pillar, detected_story, variants[3] (id, label, tone, mechanic, hook, scenes[], publish), bridge_suggestion, agent_notes. Each variant MUST have at least 3 scenes. Diary: resources_gained[], fog_tease. Do NOT return empty variants[]. JSON only.`;
 
     const raw = await chatGroq(kb.system_prompt, userMsg);
     const data = extractJson(raw) as Record<string, unknown>;
     data._mode = "llm";
     data.video_learning = pickVideoLearning(practiceLines, session, false);
     const out = ensureVariants(data, brief);
-    if (!(out.variants as unknown[])?.length) throw new Error("No variants");
+    if (!hasValidVariants(out)) throw new Error("No variants with scenes");
     return out;
   } catch (e) {
     console.error("LLM fallback:", e);
@@ -416,8 +418,86 @@ async function generateReel(session: Session, brief: ContentBrief) {
       fb._llm_error = String(e).slice(0, 150);
       return ensureVariants(fb, brief);
     }
-    throw e;
+    const fb = buildTalkingFallback(brief, session);
+    fb._llm_error = String(e).slice(0, 150);
+    return fb;
   }
+}
+
+function hasValidVariants(data: Record<string, unknown>): boolean {
+  const variants = data.variants as Record<string, unknown>[] | undefined;
+  if (!Array.isArray(variants) || !variants.length) return false;
+  return variants.some((v) => Array.isArray(v.scenes) && (v.scenes as unknown[]).length > 0);
+}
+
+function buildTalkingFallback(brief: ContentBrief, session: Session) {
+  const input = brief.input_text.trim();
+  const pillar = brief.content_type === "detail" ? "little_things"
+    : brief.content_type === "diary" ? "life_as_game" : "why_i_create";
+
+  const makeVariant = (
+    id: string,
+    label: string,
+    tone: string,
+    mechanic: string,
+    hook: string,
+    thought: string,
+  ) => ({
+    id,
+    label,
+    tone,
+    mechanic,
+    hook,
+    total_seconds: brief.duration,
+    scenes: [
+      {
+        timecode: "0–2 sec",
+        label: "Hook",
+        on_screen_text: hook.slice(0, 40),
+        my_thought: hook,
+        shot_description: "Face or hands, window light, 9:16",
+        edit_note: "Hard cut · 1.5 sec VO",
+      },
+      {
+        timecode: "2–22 sec",
+        label: "Story",
+        on_screen_text: mechanic.replace(/_/g, " ").slice(0, 24),
+        my_thought: thought,
+        shot_description: "Talking head or VO over cozy B-roll",
+        edit_note: "Cut every 2–3 sec",
+      },
+      {
+        timecode: "22–30 sec",
+        label: "Close",
+        on_screen_text: "Level 33",
+        my_thought: "Still figuring it out — and that's okay.",
+        shot_description: "Sketchbook / detail shot",
+        edit_note: "Soft outro VO",
+      },
+    ],
+    publish: {
+      hook_pick: hook,
+      caption_first_line: thought.slice(0, 120),
+      hashtags: ["#sashaiamdrawing", "#sashaiamdrawingreport", "#level33"],
+    },
+  });
+
+  return {
+    content_type: brief.content_type,
+    pillar,
+    detected_story: input.slice(0, 160),
+    duration: brief.duration,
+    mood: brief.mood,
+    variants: [
+      makeVariant("variant_a", "Personal story", brief.mood, "personal_story", input, input),
+      makeVariant("variant_b", "Provocative", brief.mood, "hot_take", `Honest take: ${input}`, `Hot take: ${input}`),
+      makeVariant("variant_c", "Calm reflection", "thoughtful", "quiet_reflection", input.split(".")[0] || input, `Quiet thought: ${input}`),
+    ],
+    bridge_suggestion: "Next: tie this to a small daily quest (Life as a Game) or a detail shot (Little Things).",
+    video_learning: pickVideoLearning([input], session, false),
+    agent_notes: "Template fallback — AI returned empty variants or was unavailable. Send /reel again for full Groq output.",
+    _mode: "fallback",
+  };
 }
 
 async function generateStoryboard(session: Session) {
@@ -426,7 +506,7 @@ async function generateStoryboard(session: Session) {
 }
 
 function ensureVariants(data: Record<string, unknown>, brief: ContentBrief) {
-  if (data.variants) return data;
+  if (hasValidVariants(data)) return data;
   const scenes = (data.scenes as Record<string, string>[]) ?? [];
   const publish = (data.publish as Record<string, unknown>) ?? {};
   data.variants = [{
@@ -460,6 +540,13 @@ function splitMessage(text: string, limit = 4096): string[] {
   return chunks;
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function formatStoryboard(data: Record<string, unknown>): string {
   const PILLAR: Record<string, string> = {
     life_as_game: "🎮 Life as a Game",
@@ -469,76 +556,86 @@ function formatStoryboard(data: Record<string, unknown>): string {
   const ctype = String(data.content_type ?? "diary");
   const pillar = PILLAR[String(data.pillar ?? "")] ?? String(data.pillar ?? "");
   const lines: string[] = [
-    `🎬 <b>Reels · ${ctype} · ${pillar}</b>`,
+    `🎬 <b>Reels · ${escapeHtml(ctype)} · ${escapeHtml(pillar)}</b>`,
     `⏱ ${data.duration ?? data.total_seconds ?? 30} sec`,
     "",
   ];
   if (data._mode === "llm") lines.push("🤖 <i>AI · Groq (Supabase)</i>", "");
-  if (data.detected_story) lines.push(`📖 <b>Story:</b> ${data.detected_story}`, "");
-
-  const vl = data.video_learning as Record<string, unknown> | undefined;
-  if (vl) {
-    lines.push(
-      "📚 <b>Practice on this Reels</b>",
-      `<b>Shoot:</b> ${vl.focus_shoot}`,
-      `   ${vl.focus_shoot_tip}`,
-      `<b>Edit:</b> ${vl.focus_edit}`,
-      `   ${vl.focus_edit_tip}`,
-    );
-    for (const p of (vl.practice as string[]) ?? []) lines.push(`• ${p}`);
-    if (vl.after_reel) lines.push(`✅ ${vl.after_reel}`);
-    lines.push("");
-  }
+  if (data._mode === "fallback") lines.push("⚠️ <i>Fallback template — retry /reel for full AI</i>", "");
+  if (data.detected_story) lines.push(`📖 <b>Story:</b> ${escapeHtml(String(data.detected_story))}`, "");
 
   const gained = (data.resources_gained as Record<string, string>[]) ?? [];
   if (gained.length) {
     lines.push("<b>Session resources:</b>");
-    for (const r of gained) lines.push(`• ${r.amount} ${r.resource} ← ${r.from_quest}`);
+    for (const r of gained) lines.push(`• ${escapeHtml(String(r.amount))} ${escapeHtml(String(r.resource))} ← ${escapeHtml(String(r.from_quest))}`);
     lines.push("");
   }
-  if (data.fog_tease) lines.push(`🌫 <b>Fog:</b> ${data.fog_tease}`, "");
+  if (data.fog_tease) lines.push(`🌫 <b>Fog:</b> ${escapeHtml(String(data.fog_tease))}`, "");
 
   const variants = (data.variants as Record<string, unknown>[]) ?? [];
   if (variants.length) {
     variants.slice(0, 3).forEach((v, i) => {
       const letter = String.fromCharCode(65 + i);
-      lines.push(`━━ <b>Variant ${letter}: ${v.label}</b>`);
-      lines.push(`<i>${v.tone} · ${v.mechanic}</i>`);
-      if (v.hook) lines.push(`🪝 ${v.hook}`);
+      lines.push(`━━ <b>Variant ${letter}: ${escapeHtml(String(v.label ?? ""))}</b>`);
+      lines.push(`<i>${escapeHtml(String(v.tone ?? ""))} · ${escapeHtml(String(v.mechanic ?? ""))}</i>`);
+      if (v.hook) lines.push(`🪝 ${escapeHtml(String(v.hook))}`);
       const pub = v.publish as Record<string, unknown> | undefined;
-      if (pub?.hook_pick) lines.push(`<b>Hook:</b> ${pub.hook_pick}`);
-      if (pub?.caption_first_line) lines.push(`<b>Caption:</b> «${pub.caption_first_line}»`);
+      if (pub?.hook_pick) lines.push(`<b>Hook:</b> ${escapeHtml(String(pub.hook_pick))}`);
+      if (pub?.caption_first_line) lines.push(`<b>Caption:</b> «${escapeHtml(String(pub.caption_first_line))}»`);
       for (const scene of (v.scenes as Record<string, string>[]) ?? []) {
-        lines.push(`<b>${scene.timecode}</b> — ${scene.label}`);
-        if (scene.on_screen_text) lines.push(`   📱 «${scene.on_screen_text}»`);
-        if (scene.my_thought) lines.push(`   🎙 «${scene.my_thought}»`);
-        if (scene.shot_description) lines.push(`   🎥 ${scene.shot_description}`);
+        lines.push(`<b>${escapeHtml(String(scene.timecode ?? ""))}</b> — ${escapeHtml(String(scene.label ?? ""))}`);
+        if (scene.on_screen_text) lines.push(`   📱 «${escapeHtml(String(scene.on_screen_text))}»`);
+        if (scene.my_thought) lines.push(`   🎙 «${escapeHtml(String(scene.my_thought))}»`);
+        if (scene.shot_description) lines.push(`   🎥 ${escapeHtml(String(scene.shot_description))}`);
       }
       lines.push("");
     });
   } else {
     lines.push("<b>Storyboard</b>");
     for (const scene of (data.scenes as Record<string, string>[]) ?? []) {
-      lines.push(`<b>${scene.timecode}</b> — ${scene.label}`);
-      if (scene.my_thought) lines.push(`   🎙 «${scene.my_thought}»`);
+      lines.push(`<b>${escapeHtml(String(scene.timecode ?? ""))}</b> — ${escapeHtml(String(scene.label ?? ""))}`);
+      if (scene.my_thought) lines.push(`   🎙 «${escapeHtml(String(scene.my_thought))}»`);
     }
     lines.push("");
   }
 
-  if (data.bridge_suggestion) lines.push(`🌉 <b>Bridge:</b> ${data.bridge_suggestion}`, "");
-  if (data.agent_notes) lines.push(`💡 ${data.agent_notes}`);
-  if (data._mode === "fallback") lines.push("", "<i>⚠️ AI unavailable — try again.</i>");
+  if (data.bridge_suggestion) lines.push(`🌉 <b>Bridge:</b> ${escapeHtml(String(data.bridge_suggestion))}`, "");
+
+  const vl = data.video_learning as Record<string, unknown> | undefined;
+  if (vl) {
+    lines.push(
+      "📚 <b>Practice on this Reels</b>",
+      `<b>Shoot:</b> ${escapeHtml(String(vl.focus_shoot ?? ""))}`,
+      `   ${escapeHtml(String(vl.focus_shoot_tip ?? ""))}`,
+      `<b>Edit:</b> ${escapeHtml(String(vl.focus_edit ?? ""))}`,
+      `   ${escapeHtml(String(vl.focus_edit_tip ?? ""))}`,
+    );
+    for (const p of (vl.practice as string[]) ?? []) lines.push(`• ${escapeHtml(p)}`);
+    if (vl.after_reel) lines.push(`✅ ${String(vl.after_reel)}`);
+    lines.push("");
+  }
+
+  if (data.agent_notes) lines.push(`💡 ${escapeHtml(String(data.agent_notes))}`);
   lines.push("", "<i>Pick a variant · /done · /reel for new topic</i>");
   return lines.join("\n").trim();
 }
 
 async function sendMessage(chatId: number, text: string) {
   for (const chunk of splitMessage(text)) {
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, text: chunk, parse_mode: "HTML" }),
     });
+    const body = await res.json().catch(() => ({}));
+    if (!body.ok) {
+      console.error("Telegram HTML send failed:", body);
+      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: chunk.replace(/<[^>]+>/g, "") }),
+      });
+    }
   }
 }
 
@@ -561,6 +658,7 @@ async function loadSession(supabase: SupabaseClient, chatId: number): Promise<Se
       awaiting_today: data.awaiting_today ?? false,
       awaiting_add: data.awaiting_add ?? false,
       player_progress: mergeProgress(data.player_progress),
+      content_brief: (data.content_brief as Record<string, unknown> | null) ?? null,
     };
   }
   return {
@@ -568,11 +666,12 @@ async function loadSession(supabase: SupabaseClient, chatId: number): Promise<Se
     last_storyboard: null, skill_shoot_index: 0, skill_edit_index: 0,
     awaiting_today: false, awaiting_add: false,
     player_progress: mergeProgress(null),
+    content_brief: null,
   };
 }
 
 async function saveSession(supabase: SupabaseClient, session: Session) {
-  await supabase.from("reels_agent_sessions").upsert({
+  const row: Record<string, unknown> = {
     chat_id: session.chat_id,
     quests: session.quests,
     xp_goal: session.xp_goal,
@@ -583,8 +682,16 @@ async function saveSession(supabase: SupabaseClient, session: Session) {
     awaiting_today: session.awaiting_today,
     awaiting_add: session.awaiting_add,
     player_progress: session.player_progress,
+    content_brief: session.content_brief,
     updated_at: new Date().toISOString(),
-  });
+  };
+  let { error } = await supabase.from("reels_agent_sessions").upsert(row);
+  if (error?.message?.includes("player_progress") || error?.message?.includes("content_brief")) {
+    delete row.player_progress;
+    delete row.content_brief;
+    ({ error } = await supabase.from("reels_agent_sessions").upsert(row));
+  }
+  if (error) throw error;
   try {
     await syncPublicProgress(supabase, session.player_progress);
   } catch (e) {
@@ -609,8 +716,14 @@ async function runReel(chatId: number, session: Session, brief: ContentBrief, su
   const data = await generateReel(session, brief);
   session.last_storyboard = data;
   session.revision_notes = "";
-  await saveSession(supabase, session);
+  session.content_brief = null;
   await sendMessage(chatId, formatStoryboard(data));
+  try {
+    await saveSession(supabase, session);
+  } catch (e) {
+    console.error("saveSession after reel:", e);
+    await sendMessage(chatId, "<i>⚠️ Storyboard sent, but session save failed. Run phase9 SQL if /log fails.</i>");
+  }
 }
 
 async function runStoryboard(chatId: number, session: Session, supabase: SupabaseClient) {
@@ -733,7 +846,13 @@ export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseCli
   if (text.startsWith("/reel")) {
     const brief = parseReelCommand(text);
     if (!brief.input_text.trim()) {
-      await sendMessage(chatId, "Send input after /reel.\n\n/reel talking 30 thoughtful\nWhy do I draw?");
+      session.content_brief = { ...brief, _awaiting: true, input_text: "" };
+      await saveSession(supabase, session);
+      await sendMessage(
+        chatId,
+        "📝 Send your topic in the <b>next message</b> (or one line after /reel).\n\n"
+        + "Example:\n/reel talking 30 thoughtful\nWhy do I draw?",
+      );
       return;
     }
     await runReel(chatId, session, brief, supabase);
@@ -790,6 +909,21 @@ export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseCli
     session.awaiting_add = false;
     await saveSession(supabase, session);
     await runStoryboard(chatId, session, supabase);
+    return;
+  }
+
+  if (isAwaitingReelInput(session.content_brief)) {
+    const pending = session.content_brief;
+    const brief: ContentBrief = {
+      content_type: String(pending.content_type ?? "surprise"),
+      input_text: text,
+      mood: String(pending.mood ?? "cozy"),
+      goal: String(pending.goal ?? "tell a story"),
+      format_pref: String(pending.format_pref ?? "mixed"),
+      duration: Number(pending.duration ?? 30),
+    };
+    session.content_brief = null;
+    await runReel(chatId, session, brief, supabase);
     return;
   }
 
