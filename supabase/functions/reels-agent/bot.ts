@@ -156,12 +156,14 @@ function questBonus(quests: string[]) {
   return { shoot, edit };
 }
 
-function pickVideoLearning(quests: string[], session: Session, advance = false) {
+function pickVideoLearning(quests: string[], session: Session, advance = false, applyBonus = true) {
   let shoot_i = session.skill_shoot_index % SHOOT_SKILLS.length;
   let edit_i = session.skill_edit_index % EDIT_SKILLS.length;
-  const bonus = questBonus(quests);
-  if (bonus.shoot) shoot_i = bonus.shoot;
-  if (bonus.edit) edit_i = bonus.edit;
+  if (applyBonus) {
+    const bonus = questBonus(quests);
+    if (bonus.shoot) shoot_i = bonus.shoot;
+    if (bonus.edit) edit_i = bonus.edit;
+  }
   const shoot = SHOOT_SKILLS[shoot_i];
   const edit = EDIT_SKILLS[edit_i];
   if (advance) {
@@ -180,21 +182,20 @@ function pickVideoLearning(quests: string[], session: Session, advance = false) 
     ].filter(Boolean),
     after_reel:
       `Done with «${shoot.title}» + «${edit.title}»? Reply <b>done</b> or /done for next · /retry to repeat`,
-    next_shoot: SHOOT_SKILLS[(shoot_i + 1) % SHOOT_SKILLS.length].title,
-    next_edit: EDIT_SKILLS[(edit_i + 1) % EDIT_SKILLS.length].title,
+    next_shoot: SHOOT_SKILLS[(session.skill_shoot_index + 1) % SHOOT_SKILLS.length].title,
+    next_edit: EDIT_SKILLS[(session.skill_edit_index + 1) % EDIT_SKILLS.length].title,
   };
 }
 
 function completeVideoLearning(quests: string[], session: Session) {
-  const shoot_i = session.skill_shoot_index % SHOOT_SKILLS.length;
-  const edit_i = session.skill_edit_index % EDIT_SKILLS.length;
+  const prev = session.last_storyboard?.video_learning as Record<string, unknown> | undefined;
   const completed = {
-    focus_shoot: SHOOT_SKILLS[shoot_i].title,
-    focus_edit: EDIT_SKILLS[edit_i].title,
+    focus_shoot: String(prev?.focus_shoot ?? SHOOT_SKILLS[session.skill_shoot_index % SHOOT_SKILLS.length].title),
+    focus_edit: String(prev?.focus_edit ?? EDIT_SKILLS[session.skill_edit_index % EDIT_SKILLS.length].title),
   };
   session.skill_shoot_index += 1;
   session.skill_edit_index += 1;
-  const next = pickVideoLearning(quests, session, false);
+  const next = pickVideoLearning(quests, session, false, false);
   return { completed, next };
 }
 
@@ -229,6 +230,7 @@ function formatSkillComplete(completed: Record<string, string>, next: Record<str
     "✅ <b>Practice logged</b>",
     `Completed: ${completed.focus_shoot} + ${completed.focus_edit}`,
     "",
+    "➡️ <b>Next assignment:</b>",
     formatVideoLearningBlock(next),
   ].join("\n");
 }
