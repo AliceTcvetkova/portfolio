@@ -15,6 +15,12 @@ import {
   progressContextForLlm,
   syncPublicProgress,
 } from "./player_progress.ts";
+import {
+  executeLearn,
+  getScriptLearningFromProgress,
+  parseLearnCommand,
+  setScriptLearningOnProgress,
+} from "./script_learning.ts";
 
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? Deno.env.get("LLM_API_KEY");
@@ -65,7 +71,7 @@ Three content lines · one universe: 🎮 Life as a Game · 🎨 Why I Create ·
 <b>Commands:</b>
 /reel [type] [duration] [mood] + input → <b>3 variants</b>
 /storyboard — diary mode (/today quests)
-/today · /add · /rewrite · /done · /retry · /status · /progress · /log
+/today · /add · /rewrite · /done · /retry · /status · /progress · /log · /learn
 
 <b>Types:</b> diary · talking · detail · hybrid · surprise
 
@@ -701,6 +707,22 @@ async function saveSession(supabase: SupabaseClient, session: Session) {
   }
 }
 
+async function runLearn(chatId: number, session: Session, supabase: SupabaseClient, text: string) {
+  const parsed = parseLearnCommand(text);
+  if (!parsed) {
+    await sendMessage(chatId, "Usage: /learn");
+    return;
+  }
+  const sl = getScriptLearningFromProgress(session.player_progress as Record<string, unknown>);
+  const { message, state } = executeLearn(sl, parsed.action, parsed.arg);
+  session.player_progress = setScriptLearningOnProgress(
+    session.player_progress as Record<string, unknown>,
+    state,
+  ) as PlayerProgress;
+  await saveSession(supabase, session);
+  await sendMessage(chatId, message);
+}
+
 async function runLog(chatId: number, session: Session, supabase: SupabaseClient, text: string) {
   const parsed = parseLogCommand(text);
   if (!parsed) {
@@ -837,6 +859,11 @@ export async function handleUpdate(update: TelegramUpdate, supabase: SupabaseCli
 
   if (text.startsWith("/log") || parseLogCommand(text)) {
     await runLog(chatId, session, supabase, text);
+    return;
+  }
+
+  if (text.startsWith("/learn") || parseLearnCommand(text)) {
+    await runLearn(chatId, session, supabase, text);
     return;
   }
 
