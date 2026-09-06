@@ -58,6 +58,7 @@ type Session = {
 type Knowledge = {
   system_prompt: string;
   knowledge_text: string;
+  knowledge_text_llm?: string;
 };
 
 let knowledgeCache: { data: Knowledge; at: number } | null = null;
@@ -286,34 +287,69 @@ async function loadKnowledge(): Promise<Knowledge> {
 
 async function chatGroq(system: string, user: string): Promise<string> {
   if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not set");
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${GROQ_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+
+  const body = (extra: Record<string, unknown> = {}) =>
+    JSON.stringify({
       model: GROQ_MODEL,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
       ],
       temperature: 0.7,
-      response_format: { type: "json_object" },
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Groq ${res.status}: ${err.slice(0, 200)}`);
+      max_tokens: 4096,
+      ...extra,
+    });
+
+  const post = async (payload: string) => {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: payload,
+      signal: AbortSignal.timeout(55000),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Groq ${res.status}: ${err.slice(0, 300)}`);
+    }
+    const json = await res.json();
+    const content = json.choices?.[0]?.message?.content ?? "";
+    if (!content.trim()) throw new Error("Groq returned empty content");
+    return content;
+  };
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await post(body({ response_format: { type: "json_object" } }));
+    } catch (e) {
+      const msg = String(e);
+      if (msg.includes("429") && attempt === 0) {
+        await new Promise((r) => setTimeout(r, 3000));
+        continue;
+      }
+      if (attempt === 0 && /json_object|response_format|400/.test(msg)) {
+        console.warn("Groq json_object failed, retry without:", msg.slice(0, 120));
+        return await post(body());
+      }
+      throw e;
+    }
   }
-  const json = await res.json();
-  return json.choices?.[0]?.message?.content ?? "";
+  throw new Error("Groq request failed after retries");
 }
 
 function extractJson(text: string): Record<string, unknown> {
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const raw = fence ? fence[1].trim() : text.trim();
-  return JSON.parse(raw);
+  let raw = (fence ? fence[1] : text).trim();
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start >= 0 && end > start) raw = raw.slice(start, end + 1);
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    throw new Error(`JSON parse: ${String(e).slice(0, 80)} · tail: ${raw.slice(-120)}`);
+  }
 }
 
 function buildTemplateStoryboard(quests: string[], xp_goal: number, session: Session) {
@@ -398,7 +434,8 @@ async function generateReel(session: Session, brief: ContentBrief) {
 
   try {
     const kb = await loadKnowledge();
-    let userMsg = `Knowledge base:\n${kb.knowledge_text}\n\n---\nCONTENT BRIEF:\n`;
+    const knowledgeBody = kb.knowledge_text_llm?.trim() || kb.knowledge_text;
+    let userMsg = `Knowledge base (compact):\n${knowledgeBody}\n\n---\nCONTENT BRIEF:\n`;
     userMsg += `- content_type: ${brief.content_type}\n- input: ${brief.input_text}\n`;
     userMsg += `- mood: ${brief.mood}\n- goal: ${brief.goal}\n- format: ${brief.format_pref}\n- duration: ${brief.duration} sec\n`;
     if (quests.length) userMsg += `\nSaved quests:\n${quests.map((q) => `- ${q}`).join("\n")}\n`;
@@ -409,7 +446,7 @@ async function generateReel(session: Session, brief: ContentBrief) {
       const labels = (last_storyboard.variants as Record<string, string>[]).map((v) => v.label).slice(0, 3);
       userMsg += `\nPrevious variants: ${labels.join(", ")}\n`;
     }
-    userMsg += `\nReturn JSON per system prompt: content_type, pillar, detected_story, variants[3] (id, label, tone, mechanic, hook, scenes[], publish), bridge_suggestion, agent_notes. Each variant MUST have at least 3 scenes. Diary: resources_gained[], fog_tease. Do NOT return empty variants[]. JSON only.`;
+    userMsg += `\nReturn JSON per system prompt: content_type, pillar, detected_story, variants[3] (id, label, tone, mechanic, hook_type, hook, scenes[], publish), bridge_suggestion, agent_notes. Each variant MUST have at least 3 scenes with unique my_thought VO. Diary: resources_gained[], fog_tease. Do NOT return empty variants[]. JSON only.`;
 
     const raw = await chatGroq(kb.system_prompt, userMsg);
     const data = extractJson(raw) as Record<string, unknown>;
@@ -419,15 +456,16 @@ async function generateReel(session: Session, brief: ContentBrief) {
     if (!hasValidVariants(out)) throw new Error("No variants with scenes");
     return out;
   } catch (e) {
-    console.error("LLM fallback:", e);
+    const errMsg = String(e).slice(0, 280);
+    console.error("LLM fallback:", errMsg);
     if (brief.content_type === "diary" && quests.length) {
       const fb = buildTemplateStoryboard(quests, xp_goal, session);
       fb._mode = "fallback";
-      fb._llm_error = String(e).slice(0, 150);
+      fb._llm_error = errMsg;
       return ensureVariants(fb, brief);
     }
     const fb = buildTalkingFallback(brief, session);
-    fb._llm_error = String(e).slice(0, 150);
+    fb._llm_error = errMsg;
     return fb;
   }
 }
@@ -569,7 +607,11 @@ function formatStoryboard(data: Record<string, unknown>): string {
     "",
   ];
   if (data._mode === "llm") lines.push("🤖 <i>AI · Groq (Supabase)</i>", "");
-  if (data._mode === "fallback") lines.push("⚠️ <i>Fallback template — retry /reel for full AI</i>", "");
+  if (data._mode === "fallback") {
+    lines.push("⚠️ <i>Fallback template — Groq unavailable or response invalid</i>");
+    if (data._llm_error) lines.push(`<code>${escapeHtml(String(data._llm_error))}</code>`);
+    lines.push("<i>Retry /reel in 30 sec</i>", "");
+  }
   if (data.detected_story) lines.push(`📖 <b>Story:</b> ${escapeHtml(String(data.detected_story))}`, "");
 
   const gained = (data.resources_gained as Record<string, string>[]) ?? [];
@@ -587,6 +629,7 @@ function formatStoryboard(data: Record<string, unknown>): string {
       lines.push(`━━ <b>Variant ${letter}: ${escapeHtml(String(v.label ?? ""))}</b>`);
       lines.push(`<i>${escapeHtml(String(v.tone ?? ""))} · ${escapeHtml(String(v.mechanic ?? ""))}</i>`);
       if (v.hook) lines.push(`🪝 ${escapeHtml(String(v.hook))}`);
+      if (v.hook_type) lines.push(`   hook_type: ${escapeHtml(String(v.hook_type))}`);
       const pub = v.publish as Record<string, unknown> | undefined;
       if (pub?.hook_pick) lines.push(`<b>Hook:</b> ${escapeHtml(String(pub.hook_pick))}`);
       if (pub?.caption_first_line) lines.push(`<b>Caption:</b> «${escapeHtml(String(pub.caption_first_line))}»`);
