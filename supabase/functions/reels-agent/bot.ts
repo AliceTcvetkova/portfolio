@@ -57,9 +57,12 @@ type Session = {
 
 type Knowledge = {
   system_prompt: string;
+  system_prompt_runtime?: string;
   knowledge_text: string;
   knowledge_text_llm?: string;
 };
+
+const GROQ_MODEL_FALLBACK = Deno.env.get("GROQ_MODEL_FALLBACK") ?? "llama-3.3-70b-versatile";
 
 let knowledgeCache: { data: Knowledge; at: number } | null = null;
 
@@ -285,12 +288,12 @@ async function loadKnowledge(): Promise<Knowledge> {
   return data;
 }
 
-async function chatGroq(system: string, user: string): Promise<string> {
+async function chatGroq(system: string, user: string, model = GROQ_MODEL): Promise<string> {
   if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not set");
 
   const body = (extra: Record<string, unknown> = {}) =>
     JSON.stringify({
-      model: GROQ_MODEL,
+      model,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
@@ -434,8 +437,9 @@ async function generateReel(session: Session, brief: ContentBrief) {
 
   try {
     const kb = await loadKnowledge();
-    const knowledgeBody = kb.knowledge_text_llm?.trim() || kb.knowledge_text;
-    let userMsg = `Knowledge base (compact):\n${knowledgeBody}\n\n---\nCONTENT BRIEF:\n`;
+    const system = kb.system_prompt_runtime?.trim() || kb.system_prompt;
+
+    let userMsg = `CONTENT BRIEF:\n`;
     userMsg += `- content_type: ${brief.content_type}\n- input: ${brief.input_text}\n`;
     userMsg += `- mood: ${brief.mood}\n- goal: ${brief.goal}\n- format: ${brief.format_pref}\n- duration: ${brief.duration} sec\n`;
     if (quests.length) userMsg += `\nSaved quests:\n${quests.map((q) => `- ${q}`).join("\n")}\n`;
@@ -448,7 +452,18 @@ async function generateReel(session: Session, brief: ContentBrief) {
     }
     userMsg += `\nReturn JSON per system prompt: content_type, pillar, detected_story, variants[3] (id, label, tone, mechanic, hook_type, hook, scenes[], publish), bridge_suggestion, agent_notes. Each variant MUST have at least 3 scenes with unique my_thought VO. Diary: resources_gained[], fog_tease. Do NOT return empty variants[]. JSON only.`;
 
-    const raw = await chatGroq(kb.system_prompt, userMsg);
+    let raw: string;
+    try {
+      raw = await chatGroq(system, userMsg);
+    } catch (e) {
+      const msg = String(e);
+      if (/413|too large|TPM/i.test(msg) && GROQ_MODEL !== GROQ_MODEL_FALLBACK) {
+        console.warn("Primary model too large, retry", GROQ_MODEL_FALLBACK);
+        raw = await chatGroq(system, userMsg, GROQ_MODEL_FALLBACK);
+      } else {
+        throw e;
+      }
+    }
     const data = extractJson(raw) as Record<string, unknown>;
     data._mode = "llm";
     data.video_learning = pickVideoLearning(practiceLines, session, false);
