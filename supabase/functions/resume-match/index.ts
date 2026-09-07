@@ -407,6 +407,12 @@ const CV_SYSTEM = `You tailor a CV using ONLY facts from the provided base CV. R
 Keep EN CV ~1 page (4-5 roles max, 3-5 bullets on recent role). RU CV ~2 pages max.
 ATS-safe single column content.
 
+CRITICAL — Ozon Bank role titles:
+- Ozon Bank official role = Senior Project Manager (EN) / Менеджер проектов (RU).
+- NEVER write Product Manager, Продакт-менеджер, or Product Owner for Ozon Bank.
+- Ozon bullets = delivery, launch coordination, workstreams, dependencies, 20+ teams, contractors — not product discovery or product strategy.
+- IRPO, Erich Krause, VK may keep Product Manager where base CV says so.
+
 For game development / Game Producer / production PM in games vacancies:
 - Headline: "Game Producer / Project Manager" OR "Product & Delivery Manager transitioning into game development"
 - Summary: 10+ years complex digital products + cross-functional teams + recent game dev/design/production focus; optional game dev focus line (desktop games, core loops, retention, player progression)
@@ -436,6 +442,31 @@ Return JSON only (no markdown):
   "ats_score": number,
   "notes": string
 }`;
+
+const OZON_PM_TITLE = /product manager|продакт|product owner|продакт-менеджер/i;
+
+function normalizeCvRoles(
+  cv: {
+    experience?: Array<{ role?: string; company?: string; dates?: string; bullets?: string[] }>;
+    summary?: string;
+  },
+  variant: string,
+): void {
+  const ozonRole = variant === "russia" ? "Менеджер проектов" : "Senior Project Manager";
+  if (cv.experience) {
+    for (const exp of cv.experience) {
+      if (/ozon/i.test(exp.company ?? "") && OZON_PM_TITLE.test(exp.role ?? "")) {
+        exp.role = ozonRole;
+      }
+    }
+  }
+  if (cv.summary) {
+    cv.summary = cv.summary
+      .replace(/Product Manager at Ozon Bank/gi, `${ozonRole} at Ozon Bank`)
+      .replace(/Продакт-менеджер в Ozon/gi, "Менеджер проектов в Ozon Банк")
+      .replace(/Product Manager в Ozon/gi, "Менеджер проектов в Ozon Банк");
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -532,6 +563,8 @@ Deno.serve(async (req) => {
     const cvResult = parseJson<CvPayload>(
       await chat(CV_SYSTEM, cvUserPrompt, "get_cv"),
     );
+
+    normalizeCvRoles(cvResult, variant);
 
     const { cv_markdown: _legacy, ats_score, notes, ...cvFields } = cvResult;
 
