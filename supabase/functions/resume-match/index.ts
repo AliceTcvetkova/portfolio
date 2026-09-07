@@ -410,7 +410,8 @@ ATS-safe single column content.
 CRITICAL — Ozon Bank role titles:
 - Ozon Bank official role = Senior Project Manager (EN) / Менеджер проектов (RU).
 - NEVER write Product Manager, Продакт-менеджер, or Product Owner for Ozon Bank.
-- Ozon bullets = delivery, launch coordination, workstreams, dependencies, 20+ teams, contractors — not product discovery or product strategy.
+- Ozon bullets = delivery, launch coordination, workstreams, dependencies, 20+ teams, contractors, **risk management**, **prevented ~4-week release delay**, **~1 month timeline gain** — not product discovery or product strategy.
+- NEVER put A/B tests, CustDev, or user interviews in Ozon bullets — only IRPO / VTB / consulting.
 - IRPO, Erich Krause, VK may keep Product Manager where base CV says so.
 
 For game development / Game Producer / production PM in games vacancies:
@@ -444,6 +445,8 @@ Return JSON only (no markdown):
 }`;
 
 const OZON_PM_TITLE = /product manager|продакт|product owner|продакт-менеджер/i;
+const OZON_FORBIDDEN_BULLET =
+  /a\/b|a\/b-тест|ав.?тест|custdev|cust dev|user interview|пользовательск.*интерв|discovery|go-to-market|product discovery|custdev/i;
 
 function normalizeCvRoles(
   cv: {
@@ -455,8 +458,12 @@ function normalizeCvRoles(
   const ozonRole = variant === "russia" ? "Менеджер проектов" : "Senior Project Manager";
   if (cv.experience) {
     for (const exp of cv.experience) {
-      if (/ozon/i.test(exp.company ?? "") && OZON_PM_TITLE.test(exp.role ?? "")) {
+      if (!/ozon/i.test(exp.company ?? "")) continue;
+      if (OZON_PM_TITLE.test(exp.role ?? "")) {
         exp.role = ozonRole;
+      }
+      if (exp.bullets) {
+        exp.bullets = exp.bullets.filter((b) => !OZON_FORBIDDEN_BULLET.test(b));
       }
     }
   }
