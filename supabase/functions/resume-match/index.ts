@@ -26,6 +26,7 @@ type Knowledge = {
   portfolio_sync?: string;
   market_positioning?: string;
   gamedev_positioning?: string;
+  cv_bullet_par?: string;
   game_development_projects?: string;
   languages?: string;
   projects: { id: string; content: string }[];
@@ -299,6 +300,42 @@ function isGamedevVacancy(text: string): boolean {
   );
 }
 
+function isProjectDeliveryVacancy(text: string): boolean {
+  const t = text.slice(0, 800);
+  const project =
+    /project manager|programme manager|program manager|delivery manager|release manager|implementation manager|pmo|project management|менеджер проект|руководитель проект|управлени[ея] проект|проектный менеджер|delivery lead|delivery manager/i
+      .test(t);
+  const product =
+    /product manager|продакт-менедж|product owner|head of product|cpo|chief product/i.test(t);
+  if (project && !product) return true;
+  if (project && product) {
+    const projectIdx = t.search(
+      /project manager|programme manager|delivery manager|менеджер проект|руководитель проект|проектный менеджер/i,
+    );
+    const productIdx = t.search(/product manager|продакт-менедж|product owner/i);
+    return projectIdx >= 0 && (productIdx < 0 || projectIdx <= productIdx);
+  }
+  return false;
+}
+
+const CANONICAL_ROLES: Record<string, { ru: string; en: string }> = {
+  ozon: { ru: "Менеджер проектов", en: "Senior Project Manager" },
+  vk: { ru: "Product Manager", en: "Project Manager" },
+  irpo: { ru: "Product Manager", en: "Product Manager" },
+  erich: { ru: "Product Manager", en: "Product Manager" },
+  consulting: { ru: "Product & Marketing Consultant", en: "Project Manager" },
+};
+
+function companyKey(company: string): string | null {
+  const c = company.toLowerCase();
+  if (/ozon|озон/.test(c)) return "ozon";
+  if (/\bvk\b|vkontakte|вконтакт/.test(c)) return "vk";
+  if (/irpo|ирпо|professional education|профессионалитет/.test(c)) return "irpo";
+  if (/erich|krause|крауз/.test(c)) return "erich";
+  if (/vtb|втб|consulting|консалт/.test(c)) return "consulting";
+  return null;
+}
+
 const CORE_PROJECT_IDS = ["ozon", "irpo", "vk", "erich_krause"];
 
 function selectProjectsForAnalyze(
@@ -384,11 +421,21 @@ function buildCvUserPrompt(
     : "Write CV content in English.";
 
   let prompt =
-    `Variant: ${langNote}\n\nVacancy:\n${compactText(vacancyText, limits.vacancy)}\n\nBase CV:\n${compactText(baseCv, limits.cv)}\n\nHints:\n${compactText(knowledge.portfolio_sync || "", limits.hints)}`;
+    `Variant: ${langNote}\n\nVacancy:\n${compactText(vacancyText, limits.vacancy)}\n\nBase CV:\n${compactText(baseCv, limits.cv)}\n\nHints:\n${compactText(knowledge.portfolio_sync || "", limits.hints)}\n\nBullet format (PAR):\n${compactText(knowledge.cv_bullet_par || "", 500)}`;
 
   if (isGamedevVacancy(vacancyText)) {
     prompt +=
       `\n\nGamedev:\n${compactText(knowledge.gamedev_positioning || "", limits.gamedev)}\n\nGame projects:\n${compactText(knowledge.game_development_projects || "", limits.gameProjects)}`;
+  }
+
+  if (isProjectDeliveryVacancy(vacancyText)) {
+    prompt +=
+      `\n\nVacancy type: PROJECT / DELIVERY / PROGRAMME MANAGER.
+Headline RU: «Менеджер проектов / Delivery Manager · 10+ лет» — NOT «Product Manager» headline.
+Headline EN: «Senior Project Manager / Delivery Manager · 10+ years».
+Ozon Bank experience role MUST be exactly «Менеджер проектов» (RU) or «Senior Project Manager» (EN) — official title, never Product Manager.
+Lead summary with delivery, workstreams, dependencies, 20+ teams, risk, release — not product discovery.
+Do NOT retitle Ozon or other roles to Product Manager to match keywords.`;
   }
 
   return prompt;
@@ -407,12 +454,29 @@ const CV_SYSTEM = `You tailor a CV using ONLY facts from the provided base CV. R
 Keep EN CV ~1 page (4-5 roles max, 3-5 bullets on recent role). RU CV ~2 pages max.
 ATS-safe single column content.
 
-CRITICAL — Ozon Bank role titles:
+CRITICAL — bullet format (action + context + result):
+- Start with a STRONG action verb (RU: запустила, перестроила, провела, выстроила; EN: launched, rebuilt, ran, built).
+- Include context/scale in the middle (teams, SKUs, standards) — problem/challenge goes HERE, not as a repeated opener.
+- End with a measurable result (metric, %, timeline, money).
+- RU examples: «Запустила X за 9 мес. при координировании 20+ команд — …, +10%» / «Провела 100+ интервью … → пилот за 1 год»
+- EN examples: "Launched X in 9 months across 20+ teams — …" / "Ran 100+ interviews … → pilot in 1 year"
+- FORBIDDEN openers: участвовала, делала, отвечала за, was involved, participated, responsible for
+- FORBIDDEN pattern: starting EVERY bullet with «При» / "Facing" / "With" — vary structure like real PM resumes
+- Copy bullet style from Base CV — do not flatten to duty lists
+
+CRITICAL — Ozon Bank role titles (IMMUTABLE — never override for any vacancy):
 - Ozon Bank official role = Senior Project Manager (EN) / Менеджер проектов (RU).
+- Copy this title EXACTLY in experience[].role for Ozon — even on Product Manager or Project Manager vacancies.
 - NEVER write Product Manager, Продакт-менеджер, or Product Owner for Ozon Bank.
 - Ozon bullets = delivery, launch coordination, workstreams, dependencies, 20+ teams, contractors, **risk management**, **prevented ~4-week release delay**, **~1 month timeline gain** — not product discovery or product strategy.
 - NEVER put A/B tests, CustDev, or user interviews in Ozon bullets — only IRPO / VTB / consulting.
-- IRPO, Erich Krause, VK may keep Product Manager where base CV says so.
+- IRPO, Erich Krause may keep Product Manager where base CV says so. VK: Project Manager (EN) / Product Manager (RU) per base CV.
+
+For project / delivery / programme manager vacancies (NOT product-manager-primary):
+- Headline RU: «Менеджер проектов / Delivery Manager · 10+ лет»
+- Headline EN: «Senior Project Manager / Delivery Manager · 10+ years»
+- Summary leads with delivery, workstreams, release management, 20+ teams — not «Product Manager everywhere»
+- Do NOT change Ozon title to Product Manager to keyword-match the JD
 
 For game development / Game Producer / production PM in games vacancies:
 - Headline: "Game Producer / Project Manager" OR "Product & Delivery Manager transitioning into game development"
@@ -444,34 +508,87 @@ Return JSON only (no markdown):
   "notes": string
 }`;
 
-const OZON_PM_TITLE = /product manager|продакт|product owner|продакт-менеджер/i;
+const WRONG_OZON_TITLE = /product manager|продакт|product owner|продакт-менеджер/i;
 const OZON_FORBIDDEN_BULLET =
   /a\/b|a\/b-тест|ав.?тест|custdev|cust dev|user interview|пользовательск.*интерв|discovery|go-to-market|product discovery|custdev/i;
+const WEAK_BULLET_START =
+  /^(участвовал|участвовала|делала|делал|занималась|занимался|отвечала|ответственн|was involved|participated|helped with|worked on|responsible for)\b/i;
+const HAS_METRIC = /\d|%|\+|\$|₽|млн|млрд|week|month|мес|год|teams|команд|SKU|интерв/i;
 
 function normalizeCvRoles(
   cv: {
+    headline?: string;
     experience?: Array<{ role?: string; company?: string; dates?: string; bullets?: string[] }>;
     summary?: string;
+    notes?: string;
   },
   variant: string,
+  vacancyText: string,
 ): void {
-  const ozonRole = variant === "russia" ? "Менеджер проектов" : "Senior Project Manager";
+  const lang = variant === "russia" ? "ru" : "en";
+  const ozonRole = CANONICAL_ROLES.ozon[lang];
+  let fixedOzon = false;
+  let weakCount = 0;
+
   if (cv.experience) {
     for (const exp of cv.experience) {
-      if (!/ozon/i.test(exp.company ?? "")) continue;
-      if (OZON_PM_TITLE.test(exp.role ?? "")) {
-        exp.role = ozonRole;
+      const key = companyKey(exp.company ?? "");
+      if (key === "ozon") {
+        if (exp.role !== ozonRole) {
+          exp.role = ozonRole;
+          fixedOzon = true;
+        }
+        if (exp.bullets) {
+          exp.bullets = exp.bullets.filter((b) => !OZON_FORBIDDEN_BULLET.test(b));
+        }
+      } else if (key === "vk" && isProjectDeliveryVacancy(vacancyText) && lang === "ru") {
+        if (/product manager|продакт/i.test(exp.role ?? "")) {
+          exp.role = "Project Manager";
+        }
       }
       if (exp.bullets) {
-        exp.bullets = exp.bullets.filter((b) => !OZON_FORBIDDEN_BULLET.test(b));
+        exp.bullets = exp.bullets.filter((b) => {
+          const weak = WEAK_BULLET_START.test(b.trim()) && !HAS_METRIC.test(b);
+          if (weak) weakCount++;
+          return !weak;
+        });
       }
     }
   }
-  if (cv.summary) {
+
+  const ozonPmInSummary =
+    /product manager.{0,40}ozon|ozon.{0,40}product manager|продакт.{0,30}ozon|ozon.{0,30}продакт/i;
+  if (cv.summary && ozonPmInSummary.test(cv.summary)) {
     cv.summary = cv.summary
       .replace(/Product Manager at Ozon Bank/gi, `${ozonRole} at Ozon Bank`)
+      .replace(/Product Manager в Ozon Bank/gi, `${ozonRole} в Ozon Банк`)
+      .replace(/Product Manager в Ozon/gi, "Менеджер проектов в Ozon Банк")
       .replace(/Продакт-менеджер в Ozon/gi, "Менеджер проектов в Ozon Банк")
-      .replace(/Product Manager в Ozon/gi, "Менеджер проектов в Ozon Банк");
+      .replace(/продакт-менеджер.{0,20}Ozon/gi, "менеджер проектов в Ozon Банк");
+    fixedOzon = true;
+  }
+
+  if (cv.headline && /ozon|озон/i.test(cv.headline) && /product manager|продакт/i.test(cv.headline)) {
+    cv.headline = cv.headline
+      .replace(/Product Manager/gi, ozonRole)
+      .replace(/Продакт-менеджер/gi, "Менеджер проектов");
+    fixedOzon = true;
+  }
+
+  if (isProjectDeliveryVacancy(vacancyText) && cv.headline) {
+    const genericPmHeadline = /^(product manager|продакт-менеджер)\s*[·•|/]/i.test(cv.headline.trim());
+    if (genericPmHeadline) {
+      cv.headline = lang === "ru"
+        ? "Менеджер проектов / Delivery Manager · 10+ лет"
+        : "Senior Project Manager / Delivery Manager · 10+ years";
+    }
+  }
+
+  if (fixedOzon) {
+    cv.notes = `${cv.notes ? cv.notes + " " : ""}Ozon Bank title corrected to official ${ozonRole} (not Product Manager).`;
+  }
+  if (weakCount > 0) {
+    cv.notes = `${cv.notes ? cv.notes + " " : ""}Some weak bullets (no action verb + metric) were removed.`;
   }
 }
 
@@ -571,7 +688,7 @@ Deno.serve(async (req) => {
       await chat(CV_SYSTEM, cvUserPrompt, "get_cv"),
     );
 
-    normalizeCvRoles(cvResult, variant);
+    normalizeCvRoles(cvResult, variant, vacancySlice);
 
     const { cv_markdown: _legacy, ats_score, notes, ...cvFields } = cvResult;
 
