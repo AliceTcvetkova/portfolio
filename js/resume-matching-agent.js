@@ -107,12 +107,15 @@
       cvOutput.innerHTML = "<p>CV preview unavailable.</p>";
       return;
     }
+    if (typeof window.normalizeCvPayload === "function") {
+      window.normalizeCvPayload(data.cv, variant, lastVacancy);
+    }
     cvOutput.innerHTML = window.renderCvDocument(data.cv, variant);
-    cvNotes.textContent = data.notes
-      ? "ATS score: " + (data.ats_score != null ? Math.round(data.ats_score * 100) + "%" : "—") + " · " + data.notes
-      : data.ats_score != null
-        ? "ATS score: " + Math.round(data.ats_score * 100) + "%"
-        : "";
+    var noteParts = [];
+    if (data.ats_score != null) noteParts.push("ATS score: " + Math.round(data.ats_score * 100) + "%");
+    if (data.notes) noteParts.push(data.notes);
+    if (data.cv._normalizeNote) noteParts.push(data.cv._normalizeNote);
+    cvNotes.textContent = noteParts.length ? noteParts.join(" · ") : "";
   }
 
   async function fetchVacancyText(input) {
@@ -152,6 +155,9 @@
   function demoResponse(action, vacancy, variant) {
     const lower = vacancy.toLowerCase();
     const gaming = /game|gaming|ea |unity|unreal/.test(lower);
+    const projectDelivery = typeof window.isProjectDeliveryVacancy === "function"
+      ? window.isProjectDeliveryVacancy(vacancy)
+      : /project manager|менеджер проект|delivery manager|programme manager/i.test(lower);
     const highlights = [
       "Cross-functional delivery with 20+ teams (Ozon Bank)",
       "100+ user interviews & platform launch (IRPO)",
@@ -195,20 +201,22 @@
       ats_score: 0.8,
       notes: "Demo preview — connect Supabase for live tailored CV.",
       cv: {
-        full_name: "Alice Tsvetkova",
-        headline: variant === "russia" ? "Product Manager · 10+ лет" : "Product & Delivery Manager",
+        full_name: variant === "russia" ? "Алиса Цветкова" : "Alice Tsvetkova",
+        headline: variant === "russia"
+          ? (projectDelivery ? "Менеджер проектов / Delivery Manager · 10+ лет" : "Product & Delivery Manager · 10+ лет")
+          : (projectDelivery ? "Senior Project Manager / Delivery Manager · 10+ years" : "Product & Delivery Manager"),
         contact_line: "+7 (910) 545-60-06 · 1409alice@gmail.com · Remote",
         summary: variant === "russia"
-          ? "Product Manager с опытом в FinTech, EdTech и platform PM. 100+ CustDev, 20+ команд."
-          : "Product & Delivery Manager with 10+ years in EdTech, FinTech and platform products.",
+          ? "Менеджер проектов / Delivery с опытом в FinTech, EdTech и platform delivery. Ozon Bank — менеджер проектов, 20+ команд."
+          : "Senior Project Manager / Delivery with 10+ years in FinTech, EdTech and platform delivery.",
         experience: [
           {
-            role: "Product Manager",
-            company: "Ozon Bank",
+            role: variant === "russia" ? "Менеджер проектов" : "Senior Project Manager",
+            company: variant === "russia" ? "Ozon Банк" : "Ozon Bank",
             dates: "Oct 2024 – Apr 2026",
             bullets: [
-              "Launched Early Payments product in 9 months with 20+ teams",
-              "Contributed to 5% annual bank turnover growth"
+              "Launched Early Payments in 9 months across 20+ teams — prevented ~4-week delay",
+              "Built risk-driven delivery → release without critical incidents"
             ]
           },
           {
@@ -286,7 +294,9 @@
 
     try {
       await window.saveCvPdfFile(
-        lastCvData.cv,
+        typeof window.normalizeCvPayload === "function"
+          ? window.normalizeCvPayload(lastCvData.cv, lastCvVariant, lastVacancy)
+          : lastCvData.cv,
         lastCvVariant,
         "Tsvetkova-tailored-cv.pdf"
       );
