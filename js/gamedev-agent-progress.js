@@ -7,6 +7,7 @@
   var completedEl = document.getElementById("gamedev-progress-completed");
   var weakEl = document.getElementById("gamedev-progress-weak");
   var tracksEl = document.getElementById("gamedev-progress-tracks");
+  var gddEl = document.getElementById("gamedev-progress-gdd");
 
   function barBlocks(percent) {
     var filled = Math.round(percent / 10);
@@ -106,6 +107,19 @@
         "<p class=\"gamedev-agent__note\">Self-study: agent assigns topic + deliverable; any suitable YouTube tutorial.</p>" +
         "</article>" +
         "</div>";
+    }
+
+    if (gddEl && data.gdd && data.gdd.length) {
+      gddEl.innerHTML =
+        '<ul class="gamedev-agent__bullets gamedev-agent__bullets--compact">' +
+        data.gdd
+          .map(function (row) {
+            var gddPct = row.gdd == null ? "—" : row.gdd + "%";
+            var briefPct = row.brief == null ? "" : " · brief " + row.brief + "%";
+            return "<li><strong>" + row.section + "</strong> — gdd " + gddPct + briefPct + "</li>";
+          })
+          .join("") +
+        "</ul>";
     }
   }
 

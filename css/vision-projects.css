@@ -159,3 +159,55 @@
 .vision__open dd {
   margin: 0.25rem 0 0;
 }
+
+.vision__mda-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  margin-top: 0.5rem;
+}
+
+.vision__mda-table th,
+.vision__mda-table td {
+  vertical-align: top;
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid rgba(113, 112, 255, 0.18);
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.vision__mda-table th {
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg-elevated);
+}
+
+.vision__card--mda {
+  overflow-x: auto;
+}
+
+.vision__card--mda h3 {
+  font-size: 0.9375rem;
+}
+
+.vision__mda-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-subtle);
+}
+
+.vision__tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-right: 0.35rem;
+}
+
+.vision__tag--est {
+  color: var(--text);
+}
+
+.vision__tag--hyp {
+  color: var(--text-subtle);
+}

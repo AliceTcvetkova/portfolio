@@ -1,10 +1,10 @@
 {
-  "updated": "2026-08-11",
-  "currentLesson": "Level 1 · MDA Framework",
-  "nextTopic": "Core Loop",
-  "streak": 0,
+  "updated": "2026-09-16",
+  "currentLesson": "Level 1 · Core Loop",
+  "nextTopic": "Core Loop submission → Player Motivation",
+  "streak": 1,
   "areas": [
-    { "id": "game-design", "label": "Game Design", "percent": 0 },
+    { "id": "game-design", "label": "Game Design", "percent": 14, "detail": "1/7 L1" },
     { "id": "open-world", "label": "Open World Design", "percent": 0 },
     { "id": "economy", "label": "Retention & Economy", "percent": 0 },
     { "id": "production", "label": "Production", "percent": 0 },
@@ -12,7 +12,10 @@
     { "id": "unreal", "label": "Unreal Engine", "percent": 0, "detail": "0/58 P0+P1" },
     { "id": "blender", "label": "Blender", "percent": 0, "detail": "0/14" }
   ],
-  "completed": [],
+  "completed": [
+    "MDA Framework — dual player + world loops (8/10 · Sep 2026)",
+    "Loop bridge — downtown forest restoration beat"
+  ],
   "weakAreas": [
     "level design",
     "technical implementation (Blueprints)",
@@ -33,8 +36,8 @@
   },
   "gdd": [
     { "section": "Identity & fantasy", "brief": 100, "gdd": null },
-    { "section": "Core loops (dual)", "brief": 100, "gdd": 0 },
-    { "section": "MDA", "brief": null, "gdd": 0 },
+    { "section": "Core loops (dual)", "brief": 100, "gdd": null },
+    { "section": "MDA analysis", "brief": null, "gdd": 100 },
     { "section": "Mechanics inventory", "brief": null, "gdd": 0 },
     { "section": "World map", "brief": null, "gdd": 0 },
     { "section": "Economy", "brief": null, "gdd": 0 }
