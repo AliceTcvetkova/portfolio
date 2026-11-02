@@ -127,6 +127,19 @@
     return trimmed;
   }
 
+  function formatAgentError(err) {
+    const msg = err && err.message ? String(err.message) : String(err || "Unknown error");
+    if (/failed to fetch|networkerror|load failed|err_name_not_resolved|nxdomain/i.test(msg)) {
+      return (
+        "Не удалось подключиться к Supabase (Failed to fetch). " +
+        "Чаще всего проект на Free plan на паузе — откройте Dashboard → Resume project: " +
+        "https://supabase.com/dashboard/project/ugoxpdqolgkzxabvuawb . " +
+        "Если проект активен, попробуйте DNS 1.1.1.1 или VPN."
+      );
+    }
+    return msg;
+  }
+
   async function callAgent(action, vacancy, variant) {
     const url = cfg.supabaseUrl;
     const key = cfg.supabaseAnonKey;
@@ -137,18 +150,28 @@
     }
 
     const endpoint = url.replace(/\/$/, "") + "/functions/v1/" + fn;
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + key,
-        apikey: key
-      },
-      body: JSON.stringify({ action, vacancy, variant })
-    });
+    let res;
+    try {
+      res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + key,
+          apikey: key
+        },
+        body: JSON.stringify({ action, vacancy, variant })
+      });
+    } catch (networkErr) {
+      throw new Error(formatAgentError(networkErr));
+    }
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Request failed");
+    let data;
+    try {
+      data = await res.json();
+    } catch (_parseErr) {
+      throw new Error("Supabase вернул не-JSON (HTTP " + res.status + "). Проверьте, что проект не на паузе.");
+    }
+    if (!res.ok) throw new Error(data.error || "Request failed (HTTP " + res.status + ")");
     return data;
   }
 
@@ -254,7 +277,7 @@
       const fetched = data.fetched_from_url ? " (loaded from URL)" : "";
       setStatus("Analysis complete." + fetched, "ok");
     } catch (err) {
-      setStatus(err.message || "Analysis failed", "error");
+      setStatus(formatAgentError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -272,7 +295,7 @@
       cvPanel.hidden = false;
       setStatus("CV ready — formatted preview below.", "ok");
     } catch (err) {
-      setStatus(err.message || "CV generation failed", "error");
+      setStatus(formatAgentError(err), "error");
     } finally {
       setLoading(false);
     }
