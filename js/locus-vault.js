@@ -16,6 +16,9 @@
     "image/webp": true,
     "image/gif": true
   };
+  /* SHA-256 of the password for adding and deleting folders, notes, and photos. */
+  var FOLDER_EDIT_HASH = "b9d61a19453454a8879c75b52bc50fb753b3fd17de346711318602291102ea72";
+  var AUTH_KEY = "locus-vault-edit-unlock";
 
   var root = document.querySelector("[data-locus-vault]");
   if (!root) return;
@@ -37,12 +40,19 @@
   var importInput = root.querySelector("[data-vault-import]");
   var lightbox = root.querySelector("[data-vault-lightbox]");
   var lightboxImg = root.querySelector("[data-vault-lightbox-img]");
+  var passwordDialog = root.querySelector("[data-vault-password]");
+  var passwordForm = root.querySelector("[data-vault-password-form]");
+  var passwordInput = root.querySelector("[data-vault-password-input]");
+  var passwordError = root.querySelector("[data-vault-password-error]");
 
   var dbPromise = null;
   var urls = {};
   var statusKey = "";
   var lastFocus = null;
   var savingFolder = false;
+  var pendingAuth = null;
+  var pendingCancel = null;
+  var suppressEscape = false;
 
   var state = {
     regions: [],
@@ -434,6 +444,103 @@
     if (lightbox && lightbox.open) lightbox.close();
   }
 
+  function isEditUnlocked() {
+    try {
+      return sessionStorage.getItem(AUTH_KEY) === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function markEditUnlocked() {
+    try {
+      sessionStorage.setItem(AUTH_KEY, "1");
+    } catch (e) {
+      /* private mode can block storage; the unlock still lasts for this action */
+    }
+  }
+
+  function sha256Hex(text) {
+    function rotr(n, x) { return (x >>> n) | (x << (32 - n)); }
+    var K = [
+      0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+      0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+      0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+      0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+      0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+      0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+      0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+      0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+    ];
+    var bytes = new TextEncoder().encode(text);
+    var bitLen = bytes.length * 8;
+    var withPad = new Uint8Array(((bytes.length + 9 + 63) >> 6) << 6);
+    withPad.set(bytes);
+    withPad[bytes.length] = 0x80;
+    var view = new DataView(withPad.buffer);
+    view.setUint32(withPad.length - 4, bitLen, false);
+    var H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+    var w = new Uint32Array(64);
+    for (var off = 0; off < withPad.length; off += 64) {
+      for (var i = 0; i < 16; i++) w[i] = view.getUint32(off + i * 4, false);
+      for (i = 16; i < 64; i++) {
+        var s0 = rotr(7, w[i - 15]) ^ rotr(18, w[i - 15]) ^ (w[i - 15] >>> 3);
+        var s1 = rotr(17, w[i - 2]) ^ rotr(19, w[i - 2]) ^ (w[i - 2] >>> 10);
+        w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+      }
+      var a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+      for (i = 0; i < 64; i++) {
+        var S1 = rotr(6, e) ^ rotr(11, e) ^ rotr(25, e);
+        var ch = (e & f) ^ (~e & g);
+        var t1 = (h + S1 + ch + K[i] + w[i]) | 0;
+        var S0 = rotr(2, a) ^ rotr(13, a) ^ rotr(22, a);
+        var maj = (a & b) ^ (a & c) ^ (b & c);
+        var t2 = (S0 + maj) | 0;
+        h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+      }
+      H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
+      H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+    }
+    var hex = "";
+    for (i = 0; i < 8; i++) hex += ("00000000" + (H[i] >>> 0).toString(16)).slice(-8);
+    return hex;
+  }
+
+  function finishPassword(ok) {
+    var action = pendingAuth;
+    var cancel = pendingCancel;
+    pendingAuth = null;
+    pendingCancel = null;
+    if (passwordError) passwordError.hidden = true;
+    if (passwordDialog && passwordDialog.open) passwordDialog.close();
+    if (ok) {
+      markEditUnlocked();
+      if (action) action();
+      return;
+    }
+    if (cancel) cancel();
+  }
+
+  function requireEditAuth(action, onCancel) {
+    if (isEditUnlocked()) {
+      action();
+      return;
+    }
+    pendingAuth = action;
+    pendingCancel = onCancel || null;
+    if (passwordError) passwordError.hidden = true;
+    if (passwordInput) passwordInput.value = "";
+    if (!passwordDialog || typeof passwordDialog.showModal !== "function") {
+      pendingAuth = null;
+      pendingCancel = null;
+      setStatus("Could not check the password in this browser.");
+      if (onCancel) onCancel();
+      return;
+    }
+    passwordDialog.showModal();
+    if (passwordInput) passwordInput.focus();
+  }
+
   function cancelDraft() {
     state.draft = [];
     state.cursor = null;
@@ -821,7 +928,9 @@
     renderOverlay();
   }
 
-  root.querySelector("[data-vault-draw]").addEventListener("click", startDrawing);
+  root.querySelector("[data-vault-draw]").addEventListener("click", function () {
+    requireEditAuth(startDrawing);
+  });
 
   root.querySelector("[data-vault-undo]").addEventListener("click", function () {
     if (state.mode !== "drawing" || !state.draft.length) return;
@@ -852,7 +961,7 @@
 
   root.querySelector("[data-vault-export]").addEventListener("click", exportVault);
   root.querySelector("[data-vault-import]").addEventListener("click", function () {
-    importInput.click();
+    requireEditAuth(function () { importInput.click(); });
   });
 
   stage.addEventListener("click", onStageClick);
@@ -883,7 +992,18 @@
   drawer.querySelector("[data-vault-scrim]").addEventListener("click", closeDrawer);
   drawer.querySelector("[data-vault-drawer-close]").addEventListener("click", closeDrawer);
 
-  nameInput.addEventListener("change", renameOpenFolder);
+  nameInput.addEventListener("change", function () {
+    var region = findRegion(state.openId);
+    if (!region) return;
+    var next = nameInput.value.trim();
+    if (!next || next === region.name) {
+      nameInput.value = region.name;
+      return;
+    }
+    requireEditAuth(renameOpenFolder, function () {
+      nameInput.value = region.name;
+    });
+  });
   nameInput.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -895,11 +1015,11 @@
     event.preventDefault();
     var text = noteField.value.trim();
     if (!text) return;
-    addNote(text);
+    requireEditAuth(function () { addNote(text); });
   });
 
   root.querySelector("[data-vault-photo]").addEventListener("click", function () {
-    fileInput.click();
+    requireEditAuth(function () { fileInput.click(); });
   });
 
   fileInput.addEventListener("change", function () {
@@ -916,15 +1036,19 @@
   itemsEl.addEventListener("click", function (event) {
     var edit = event.target.closest("[data-vault-edit-note]");
     if (edit) {
-      state.editingNoteId = edit.getAttribute("data-vault-edit-note");
-      renderItems();
-      var field = itemsEl.querySelector("[data-vault-note-edit]");
-      if (field) field.focus();
+      requireEditAuth(function () {
+        state.editingNoteId = edit.getAttribute("data-vault-edit-note");
+        renderItems();
+        var field = itemsEl.querySelector("[data-vault-note-edit]");
+        if (field) field.focus();
+      });
       return;
     }
     var save = event.target.closest("[data-vault-save-note]");
     if (save) {
-      saveNoteEdit(save.getAttribute("data-vault-save-note"));
+      requireEditAuth(function () {
+        saveNoteEdit(save.getAttribute("data-vault-save-note"));
+      });
       return;
     }
     if (event.target.closest("[data-vault-cancel-edit]")) {
@@ -935,7 +1059,7 @@
     var remove = event.target.closest("[data-vault-delete-item]");
     if (remove) {
       var item = findItem(remove.getAttribute("data-vault-delete-item"));
-      if (item) deleteItem(item);
+      if (item) requireEditAuth(function () { deleteItem(item); });
       return;
     }
     var photo = event.target.closest("[data-vault-open-photo]");
@@ -945,7 +1069,58 @@
     }
   });
 
-  root.querySelector("[data-vault-delete-region]").addEventListener("click", deleteOpenFolder);
+  root.querySelector("[data-vault-delete-region]").addEventListener("click", function () {
+    requireEditAuth(deleteOpenFolder);
+  });
+
+  if (passwordForm) {
+    passwordForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var value = passwordInput ? passwordInput.value : "";
+      var hash;
+      try {
+        hash = sha256Hex(value);
+      } catch (err) {
+        setStatus("Could not check the password in this browser.");
+        return;
+      }
+      if (hash !== FOLDER_EDIT_HASH) {
+        if (passwordError) passwordError.hidden = false;
+        if (passwordInput) {
+          passwordInput.focus();
+          passwordInput.select();
+        }
+        return;
+      }
+      finishPassword(true);
+    });
+  }
+
+  if (passwordDialog) {
+    var passwordCancel = root.querySelector("[data-vault-password-cancel]");
+    if (passwordCancel) {
+      passwordCancel.addEventListener("click", function () {
+        if (passwordDialog.open) passwordDialog.close();
+      });
+    }
+    passwordDialog.addEventListener("close", function () {
+      if (passwordError) passwordError.hidden = true;
+      if (!pendingAuth) return;
+      var cancel = pendingCancel;
+      pendingAuth = null;
+      pendingCancel = null;
+      if (cancel) cancel();
+    });
+    passwordDialog.addEventListener("cancel", function () {
+      if (passwordError) passwordError.hidden = true;
+    });
+  }
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && passwordDialog && passwordDialog.open) {
+      suppressEscape = true;
+    }
+  }, true);
 
   if (lightbox) {
     lightbox.addEventListener("click", function (event) {
@@ -966,6 +1141,10 @@
   document.addEventListener("keydown", function (event) {
     if (!section || section.hidden) return;
     if (event.key === "Escape") {
+      if (suppressEscape || (passwordDialog && passwordDialog.open)) {
+        suppressEscape = false;
+        return;
+      }
       if (lightbox && lightbox.open) {
         lightbox.close();
         return;
@@ -990,6 +1169,7 @@
   document.addEventListener("locus:section", function (event) {
     if (!event.detail || event.detail.id === "vault") return;
     closeLightbox();
+    if (passwordDialog && passwordDialog.open) passwordDialog.close();
     if (state.mode !== "idle") cancelDraft();
     else closeDrawer();
   });

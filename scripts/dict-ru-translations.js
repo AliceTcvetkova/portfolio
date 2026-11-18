@@ -795,4 +795,11 @@ module.exports = {
   "Undo point": "Убрать точку",
   "Vault imported.": "Хранилище импортировано.",
   "Write a note…": "Напишите записку…",
+  "Anyone can look. A password is required to add or delete a folder, note, or photo.":
+    "Смотреть может кто угодно. Пароль нужен, чтобы добавить или удалить папку, записку или фото.",
+  Continue: "Продолжить",
+  "Could not check the password in this browser.": "Не удалось проверить пароль в этом браузере.",
+  "Enter the password to add or delete.": "Введите пароль, чтобы добавить или удалить.",
+  Password: "Пароль",
+  "Wrong password.": "Неверный пароль.",
 };

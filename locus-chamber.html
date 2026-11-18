@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/locus-chamber.css?v=vault">
+  <link rel="stylesheet" href="css/locus-chamber.css?v=vault-lock">
 </head>
 <body class="locus-page" data-sketches="locus-chamber">
 
@@ -481,6 +481,7 @@
           <h2 class="locus-vault__title">My vault</h2>
           <p class="locus-vault__lead">My room. Outline an area, name the folder, and keep notes and photos inside it.</p>
           <p class="locus-vault__persist">Saved in this browser, on this device. Nothing is sent to a server.</p>
+          <p class="locus-vault__persist">Anyone can look. A password is required to add or delete a folder, note, or photo.</p>
         </div>
 
         <div class="locus-vault__toolbar">
@@ -535,6 +536,20 @@
           </div>
         </div>
 
+        <dialog class="locus-vault__password" data-vault-password>
+          <form class="locus-vault__password-form" data-vault-password-form>
+            <p class="locus-vault__password-lead">Enter the password to add or delete.</p>
+            <label class="locus-vault__naming-label">
+              <span>Password</span>
+              <input class="locus-vault__input" type="password" name="password" data-vault-password-input autocomplete="current-password" required>
+            </label>
+            <p class="locus-vault__password-error" data-vault-password-error role="alert" hidden>Wrong password.</p>
+            <div class="locus-vault__composer-actions">
+              <button type="submit" class="btn btn--primary">Continue</button>
+              <button type="button" class="btn" data-vault-password-cancel>Cancel</button>
+            </div>
+          </form>
+        </dialog>
         <dialog class="locus-vault__lightbox" data-vault-lightbox>
           <button type="button" class="btn locus-vault__lightbox-close" data-vault-lightbox-close>Close</button>
           <img alt="" data-vault-lightbox-img>
@@ -561,6 +576,6 @@
   <script src="js/locus-chamber.js"></script>
   <script src="js/locus-chamber-player.js?v=living-room-pause"></script>
   <script src="js/locus-chamber-sections.js?v=vault"></script>
-  <script src="js/locus-vault.js?v=1"></script>
+  <script src="js/locus-vault.js?v=2"></script>
 </body>
 </html>

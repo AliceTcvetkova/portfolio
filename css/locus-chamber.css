@@ -2973,6 +2973,41 @@
   border-color: rgba(240, 180, 180, 0.5);
 }
 
+.locus-vault__password {
+  width: min(420px, calc(100vw - 2rem));
+  margin: auto;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.locus-vault__password::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.locus-vault__password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.locus-vault__password-lead {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.locus-vault__password-error {
+  margin: 0;
+  color: #f0b4b4;
+  font-size: 0.8125rem;
+}
+
+.locus-vault__password-error[hidden] {
+  display: none;
+}
+
 .locus-vault__lightbox {
   padding: 1rem;
   border: 0;

@@ -90,6 +90,12 @@ const extraJsStrings = [
   "Undo point",
   "Vault imported.",
   "Write a note…",
+  "Anyone can look. A password is required to add or delete a folder, note, or photo.",
+  "Continue",
+  "Could not check the password in this browser.",
+  "Enter the password to add or delete.",
+  "Password",
+  "Wrong password.",
 ];
 
 const ru = require("./dict-ru-translations.js");
