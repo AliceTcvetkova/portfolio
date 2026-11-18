@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/locus-chamber.css?v=evolution-section">
+  <link rel="stylesheet" href="css/locus-chamber.css?v=vault">
 </head>
 <body class="locus-page" data-sketches="locus-chamber">
 
@@ -53,6 +53,9 @@
       </button>
       <button type="button" class="locus-section-nav__item" data-locus-section="evolution" aria-current="false">
         Evolution
+      </button>
+      <button type="button" class="locus-section-nav__item" data-locus-section="vault" aria-current="false">
+        My vault
       </button>
     </nav>
 
@@ -471,6 +474,75 @@
         </div>
       </div>
     </section>
+
+    <section class="locus-section" data-locus-section-panel="vault" hidden aria-label="My vault">
+      <div class="locus-vault" data-locus-vault>
+        <div class="locus-vault__intro">
+          <h2 class="locus-vault__title">My vault</h2>
+          <p class="locus-vault__lead">My room. Outline an area, name the folder, and keep notes and photos inside it.</p>
+          <p class="locus-vault__persist">Saved in this browser, on this device. Nothing is sent to a server.</p>
+        </div>
+
+        <div class="locus-vault__toolbar">
+          <div class="locus-vault__tools" data-vault-tools="idle">
+            <button type="button" class="btn btn--primary" data-vault-draw>Outline an area</button>
+            <button type="button" class="btn" data-vault-export disabled>Export</button>
+            <button type="button" class="btn" data-vault-import>Import</button>
+          </div>
+          <div class="locus-vault__tools" data-vault-tools="drawing" hidden>
+            <button type="button" class="btn" data-vault-undo>Undo point</button>
+            <button type="button" class="btn btn--primary" data-vault-close-shape disabled>Close area</button>
+            <button type="button" class="btn" data-vault-cancel>Cancel</button>
+          </div>
+          <form class="locus-vault__tools locus-vault__naming" data-vault-tools="naming" data-vault-naming hidden>
+            <label class="locus-vault__naming-label">
+              <span>Folder name</span>
+              <input class="locus-vault__input" data-vault-name-input name="folderName" maxlength="80" required autocomplete="off">
+            </label>
+            <button type="submit" class="btn btn--primary">Save folder</button>
+            <button type="button" class="btn" data-vault-cancel>Cancel</button>
+          </form>
+        </div>
+        <p class="locus-vault__status" data-vault-status role="status"></p>
+
+        <div class="locus-vault__stage" data-vault-stage>
+          <img class="locus-vault__image" data-vault-image src="assets/locus-chamber/vault/my-room.jpg" alt="My room, seen from the doorway" width="1280" height="720" draggable="false">
+          <svg class="locus-vault__svg" data-vault-svg viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+          <div class="locus-vault__labels" data-vault-labels aria-hidden="true"></div>
+        </div>
+
+        <div class="locus-vault__drawer" data-vault-drawer hidden>
+          <button type="button" class="locus-vault__scrim" data-vault-scrim aria-label="Close"></button>
+          <div class="locus-vault__panel" role="dialog" aria-modal="true" aria-labelledby="locus-vault-name-label">
+            <header class="locus-vault__panel-head">
+              <label class="locus-vault__naming-label" id="locus-vault-name-label">
+                <span>Folder name</span>
+                <input class="locus-vault__input" data-vault-folder-name maxlength="80" autocomplete="off">
+              </label>
+              <button type="button" class="btn" data-vault-drawer-close>Close</button>
+            </header>
+            <div class="locus-vault__items" data-vault-items></div>
+            <form class="locus-vault__composer" data-vault-note-form>
+              <textarea class="locus-vault__textarea" data-vault-note rows="3" maxlength="20000"></textarea>
+              <div class="locus-vault__composer-actions">
+                <button type="submit" class="btn btn--primary">Save note</button>
+                <button type="button" class="btn" data-vault-photo>Add a photo</button>
+              </div>
+            </form>
+            <div class="locus-vault__panel-foot">
+              <button type="button" class="btn locus-vault__danger" data-vault-delete-region>Delete folder</button>
+            </div>
+          </div>
+        </div>
+
+        <dialog class="locus-vault__lightbox" data-vault-lightbox>
+          <button type="button" class="btn locus-vault__lightbox-close" data-vault-lightbox-close>Close</button>
+          <img alt="" data-vault-lightbox-img>
+        </dialog>
+        <input type="file" data-vault-file hidden accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+        <input type="file" data-vault-import hidden accept="application/json,.json">
+      </div>
+    </section>
   </div>
 
   <footer class="site-footer">
@@ -488,6 +560,7 @@
   <script src="js/locus-chamber-castle.js?v=back-reset"></script>
   <script src="js/locus-chamber.js"></script>
   <script src="js/locus-chamber-player.js?v=living-room-pause"></script>
-  <script src="js/locus-chamber-sections.js?v=evolution-crosslink"></script>
+  <script src="js/locus-chamber-sections.js?v=vault"></script>
+  <script src="js/locus-vault.js?v=1"></script>
 </body>
 </html>

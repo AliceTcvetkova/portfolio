@@ -52,5 +52,8 @@ window.SITE_I18N_RU_ATTRS = {
   "Product & Delivery Manager • AI Projects • Eco Clean Map • UX • Case Studies": "Product & Delivery Manager • AI-проекты • Eco Clean Map • UX • кейсы",
   "Product & Delivery Manager • AI Projects • Eco Clean Map • UX • GameDev • Case Studies from FinTech, EdTech and platform work.": "Product & Delivery Manager • AI-проекты • Eco Clean Map • UX • GameDev • кейсы из FinTech, EdTech и платформенных продуктов.",
   "VK · Alice Tsvetkova": "VK · Alice Tsvetkova",
-  "Werewolf in the city": "Оборотень в городе"
+  "Werewolf in the city": "Оборотень в городе",
+  "Close": "Закрыть",
+  "My room, seen from the doorway": "Моя комната, вид от входа",
+  "My vault": "Моё хранилище"
 };

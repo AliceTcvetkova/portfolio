@@ -2609,3 +2609,419 @@
     max-height: 160px;
   }
 }
+
+/* My vault — room folders */
+
+.locus-vault__intro {
+  padding-top: 0.25rem;
+}
+
+.locus-vault__title {
+  margin: 0 0 0.4rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.locus-vault__lead {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--text-muted);
+}
+
+.locus-vault__persist {
+  margin: 0.35rem 0 1rem;
+  max-width: 62ch;
+  color: var(--text-subtle);
+  font-size: 0.8125rem;
+}
+
+.locus-vault__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.locus-vault__tools[hidden],
+.locus-vault__drawer[hidden] {
+  display: none;
+}
+
+.locus-vault__naming {
+  align-items: flex-end;
+}
+
+.locus-vault__naming-label {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: min(100%, 16rem);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.locus-vault__input,
+.locus-vault__textarea,
+.locus-vault__note-edit {
+  width: 100%;
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.locus-vault__textarea,
+.locus-vault__note-edit {
+  resize: vertical;
+  min-height: 4.5rem;
+}
+
+.locus-vault__input:focus,
+.locus-vault__textarea:focus,
+.locus-vault__note-edit:focus {
+  outline: 2px solid rgba(113, 112, 255, 0.55);
+  outline-offset: 1px;
+  border-color: rgba(113, 112, 255, 0.45);
+}
+
+.locus-vault .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.locus-vault__status {
+  margin: 0.75rem 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.locus-vault__status:empty {
+  display: none;
+}
+
+.locus-vault__stage {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #1a1814;
+  touch-action: manipulation;
+}
+
+.locus-vault--drawing .locus-vault__stage {
+  cursor: crosshair;
+}
+
+.locus-vault__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.locus-vault__svg,
+.locus-vault__labels {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.locus-vault__svg,
+.locus-vault__labels,
+.locus-vault__label,
+.locus-vault__handle,
+.locus-vault__draft {
+  pointer-events: none;
+}
+
+.locus-vault__region {
+  fill: rgba(113, 112, 255, 0.3);
+  stroke: #d7d6ff;
+  stroke-width: 1.75;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.locus-vault__region:hover,
+.locus-vault__region.is-open {
+  fill: rgba(113, 112, 255, 0.48);
+}
+
+.locus-vault__region:focus {
+  outline: none;
+}
+
+.locus-vault__region:focus-visible {
+  stroke: #ffffff;
+  stroke-width: 2.5;
+}
+
+.locus-vault--drawing .locus-vault__region {
+  pointer-events: none;
+}
+
+.locus-vault__draft {
+  fill: none;
+  stroke: #f7f7ff;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.locus-vault__label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  max-width: 9.5rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(8, 9, 10, 0.78);
+  color: #f7f8f8;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.locus-vault__handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 2px #7170ff;
+}
+
+.locus-vault__handle.is-first {
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  margin-top: -8px;
+  box-shadow: 0 0 0 4px rgba(113, 112, 255, 0.45);
+}
+
+.locus-vault__drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+}
+
+.locus-vault__scrim {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+
+.locus-vault__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  background: var(--bg-elevated);
+  border-left: 1px solid var(--border);
+  box-shadow: -24px 0 60px rgba(0, 0, 0, 0.4);
+  animation: locus-vault-in 0.22s ease;
+}
+
+.locus-vault__panel-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.locus-vault__items {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 1.25rem 1rem;
+}
+
+.locus-vault__empty p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.locus-vault__empty-title {
+  margin-bottom: 0.25rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.locus-vault__card {
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.locus-vault__card:last-child {
+  border-bottom: 0;
+}
+
+.locus-vault__note-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.locus-vault__card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.45rem;
+}
+
+.locus-vault__time,
+.locus-vault__filename {
+  color: var(--text-subtle);
+  font-size: 0.75rem;
+}
+
+.locus-vault__filename {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.locus-vault__text-btn {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.locus-vault__text-btn:hover,
+.locus-vault__text-btn:focus-visible {
+  color: var(--text);
+}
+
+.locus-vault__thumb {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+}
+
+.locus-vault__thumb img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.locus-vault__composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.locus-vault__composer-actions,
+.locus-vault__panel-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.locus-vault__panel-foot {
+  padding: 0 1.25rem 1.1rem;
+}
+
+.locus-vault__danger {
+  color: #f0b4b4;
+  border-color: rgba(240, 180, 180, 0.28);
+}
+
+.locus-vault__danger:hover {
+  color: #ffd7d7;
+  border-color: rgba(240, 180, 180, 0.5);
+}
+
+.locus-vault__lightbox {
+  padding: 1rem;
+  border: 0;
+  background: transparent;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 2rem);
+}
+
+.locus-vault__lightbox::backdrop {
+  background: rgba(0, 0, 0, 0.78);
+}
+
+.locus-vault__lightbox img {
+  display: block;
+  max-width: min(92vw, 1100px);
+  max-height: 82vh;
+  margin: 0 auto;
+  border-radius: 12px;
+}
+
+.locus-vault__lightbox-close {
+  display: block;
+  margin: 0 auto 0.75rem;
+}
+
+@keyframes locus-vault-in {
+  from { transform: translateX(24px); }
+  to { transform: none; }
+}
+
+@keyframes locus-vault-up {
+  from { transform: translateY(24px); }
+  to { transform: none; }
+}
+
+@media (max-width: 720px) {
+  .locus-vault__panel {
+    top: auto;
+    width: 100%;
+    height: min(78vh, 680px);
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    animation-name: locus-vault-up;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .locus-vault__panel {
+    animation: none;
+  }
+}
