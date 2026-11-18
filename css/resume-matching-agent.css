@@ -1,0 +1,355 @@
+/* AI Resume Matching Agent — case page */
+
+.resume-agent__meta {
+  margin: 0 0 2rem;
+}
+
+.resume-agent__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.resume-agent__grid dt {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  margin-bottom: 0.35rem;
+}
+
+.resume-agent__grid dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.resume-agent__pipeline {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  padding-left: 1.25rem;
+}
+
+.resume-agent__pipeline li {
+  margin-bottom: 0.35rem;
+}
+
+.resume-agent__tool {
+  margin-top: 2.5rem;
+  padding: 1.75rem;
+  background: var(--bg-card);
+  border: 1px solid rgba(113, 112, 255, 0.22);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 48px rgba(113, 112, 255, 0.06);
+}
+
+.resume-agent__label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.resume-agent__textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 0.875rem 1rem;
+  font-family: var(--font);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+
+.resume-agent__textarea:focus {
+  outline: none;
+  border-color: rgba(113, 112, 255, 0.5);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.resume-agent__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.resume-agent__radio {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.resume-agent__radio input {
+  accent-color: var(--accent);
+}
+
+.resume-agent__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.btn--small {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.resume-agent__status {
+  min-height: 1.25rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-subtle);
+}
+
+.resume-agent__status--error {
+  color: #f87171;
+}
+
+.resume-agent__status--ok {
+  color: #86efac;
+}
+
+.resume-agent__results {
+  margin-top: 1.75rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.resume-agent__match {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.resume-agent__match-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.resume-agent__match-value {
+  font-size: 2.5rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.resume-agent__match-value.is-poor {
+  color: #f87171;
+}
+
+.resume-agent__fit {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.resume-agent__fit--strong_fit {
+  color: #86efac;
+  background: rgba(134, 239, 172, 0.1);
+}
+
+.resume-agent__fit--conditional_fit {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.resume-agent__fit--poor_fit {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.resume-agent__block--blockers li {
+  color: #f87171;
+}
+
+.resume-agent__block--lang li {
+  color: #fb923c;
+}
+
+.resume-agent__block h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 0 0 0.625rem;
+  color: var(--text);
+}
+
+.resume-agent__block ul {
+  margin: 0 0 1.25rem;
+  padding-left: 1.15rem;
+}
+
+.resume-agent__block li {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.resume-agent__block--concerns li {
+  color: #fbbf24;
+}
+
+.resume-agent__cv {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.resume-agent__cv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.resume-agent__cv-header h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.resume-agent__cv-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.resume-agent__cv-preview {
+  max-height: 720px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #eef0f4;
+  padding: 1rem;
+}
+
+/* ATS-style CV document (single column, print-ready) */
+.cv-document {
+  background: #ffffff;
+  color: #1a1a1a;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 2rem 2.25rem;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.12);
+}
+
+.cv-document__name {
+  margin: 0;
+  font-size: 20pt;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #111;
+}
+
+.cv-document__headline {
+  margin: 0.2rem 0 0.5rem;
+  font-size: 11pt;
+  font-weight: 600;
+  color: #333;
+}
+
+.cv-document__contact,
+.cv-document__links {
+  margin: 0.15rem 0;
+  font-size: 9.5pt;
+  color: #444;
+}
+
+.cv-document__links a {
+  color: #1a56db;
+  text-decoration: none;
+}
+
+.cv-document__section {
+  margin-top: 1.1rem;
+}
+
+.cv-document__section-title {
+  margin: 0 0 0.45rem;
+  font-size: 10pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #111;
+  border-bottom: 1px solid #bbb;
+  padding-bottom: 0.2rem;
+}
+
+.cv-document__summary,
+.cv-document__skills,
+.cv-document__languages {
+  margin: 0;
+}
+
+.cv-document__job {
+  margin-bottom: 0.85rem;
+}
+
+.cv-document__job-title {
+  font-size: 10.5pt;
+}
+
+.cv-document__job-company {
+  font-weight: 600;
+}
+
+.cv-document__job-dates {
+  font-size: 9.5pt;
+  color: #555;
+  margin-top: 0.1rem;
+}
+
+.cv-document__bullets,
+.cv-document__list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.cv-document__bullets li,
+.cv-document__list li {
+  margin-bottom: 0.25rem;
+}
+
+.resume-agent__cv-notes {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-subtle);
+}
+
+.resume-agent__form.is-loading .btn {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+@media (max-width: 540px) {
+  .resume-agent__tool {
+    padding: 1.25rem;
+  }
+
+  .resume-agent__match-value {
+    font-size: 2rem;
+  }
+}

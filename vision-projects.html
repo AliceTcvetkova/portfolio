@@ -8,12 +8,14 @@
   <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <title>Game Worlds · Alice Tsvetkova</title>
+  <meta name="description" content="Long-term game world concepts — restoration game with dual progression and design principles.">
   <script src="js/site-config.js"></script>
   <script src="js/site-analytics.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/vision-projects.css">
 </head>
 <body data-sketches="vision-projects">
 
@@ -27,30 +29,180 @@
     </nav>
   </header>
 
-  <main class="case-detail">
+  <main class="case-detail vision">
     <a class="case-detail__back" href="index.html#ideas">← Back to personal product vision</a>
     <p class="case-detail__label">Personal Product Vision · Long-term Concepts</p>
     <h1>Game Worlds</h1>
-    <p>Concepts for game worlds, systems, and interactive world building.</p>
+    <p class="vision__lede">Concepts for interactive worlds, systems, and long-term world building — from environmental gamification to a restoration game I’m designing and learning to build.</p>
 
-    <section>
+    <section id="environmental">
       <h2>Environmental Development</h2>
       <!-- content -->
     </section>
 
-    <section>
-      <h2>Game Worlds</h2>
-      <!-- content -->
+    <section id="game-worlds">
+      <h2>Game Worlds · Restoration concept</h2>
+      <p class="vision__section-intro">Working title TBD. Core idea is fixed: the player explores and restores a world damaged by destruction, neglect, or injustice — and sees that their actions change the world, not only their character.</p>
+
+      <figure class="vision__figure">
+        <img src="assets/game-worlds/dual-progressions.png" width="720" height="900" alt="Diagram: Two parallel progressions — You become better while the world becomes better. Every action improves both.">
+        <figcaption>Two parallel progressions — the design spine. Character growth and world restoration feed each other: a better world unlocks new potential.</figcaption>
+      </figure>
+
+      <div class="vision__grid" style="margin-top: 2rem;">
+        <article class="vision__card">
+          <h3>Player fantasy</h3>
+          <p>“I don’t just level up — I gradually return life to a damaged world and <em>see</em> the consequences of my actions.”</p>
+        </article>
+        <article class="vision__card">
+          <h3>Core pleasure</h3>
+          <p>Progression must feel real: visible consequences in the environment, not only stats on a character sheet.</p>
+        </article>
+      </div>
+
+      <h3 style="margin-top: 2rem;">You — become better</h3>
+      <p class="vision__section-intro">Character progression: new abilities, tools, and ways to interact — so you can solve harder problems.</p>
+      <ul class="vision__pill-list">
+        <li>Repair</li>
+        <li>Gardening</li>
+        <li>Engineering</li>
+        <li>Leadership</li>
+        <li>Crafting</li>
+        <li>Survival</li>
+        <li>Ecology</li>
+        <li>Architecture</li>
+        <li>Photography</li>
+        <li>Knowledge</li>
+      </ul>
+      <p class="vision__outcomes">→ New challenges · New abilities · New stories</p>
+
+      <h3 style="margin-top: 2rem;">World — becomes better</h3>
+      <p class="vision__section-intro">World progression: the map and communities change because of the player — cleaner, safer, more alive.</p>
+      <ul class="vision__pill-list">
+        <li>Cleaner</li>
+        <li>Greener</li>
+        <li>Safer</li>
+        <li>Happier</li>
+        <li>More beautiful</li>
+        <li>More connected</li>
+        <li>More biodiverse</li>
+        <li>More fair</li>
+      </ul>
+      <p class="vision__outcomes">→ New opportunities · New places · New relationships</p>
+
+      <h3 style="margin-top: 2rem;">Core loops</h3>
+      <p><strong>Player loop</strong></p>
+      <pre class="vision__loop">Explore → Encounter problem → Act → Reward → Improve → Explore new areas</pre>
+      <p style="margin-top: 1rem;"><strong>World loop</strong> <em>(differentiator)</em></p>
+      <pre class="vision__loop vision__loop--world">Player action → World changes → New world state → New exploration possibilities</pre>
+
+      <h3 style="margin-top: 2rem;">Meta loops</h3>
+      <div class="vision__grid">
+        <article class="vision__card">
+          <h3>Player meta</h3>
+          <pre class="vision__loop" style="margin-top: 0;">Explore → Complete activities → Gain resources → Develop character → Unlock abilities & areas → Restore world → Repeat</pre>
+        </article>
+        <article class="vision__card">
+          <h3>World meta</h3>
+          <pre class="vision__loop vision__loop--world" style="margin-top: 0;">Player actions → World restoration → New world state → New areas / NPCs / activities / stories → More reasons to explore</pre>
+        </article>
+      </div>
+
+      <h3 style="margin-top: 2rem;">Design principles</h3>
+      <ol class="vision__section-intro">
+        <li>Progression creates <strong>visible consequences</strong> in the world.</li>
+        <li>Player actions <strong>matter</strong>.</li>
+        <li>Abilities unlock <strong>new possibilities</strong>, not only bigger numbers.</li>
+        <li>Restoration <strong>reveals content</strong> — not a cosmetic layer.</li>
+        <li>Meta-progression <strong>expands agency</strong>, not a linear upgrade tree.</li>
+        <li>Relaxing / meditative activities coexist with the main loop.</li>
+        <li>Reward <strong>curiosity and exploration</strong>.</li>
+      </ol>
+
+      <section id="mda" class="vision__mda">
+        <h3 style="margin-top: 2.5rem;">MDA · Living GDD</h3>
+        <p class="vision__section-intro">From Level 1 curriculum (<a href="gamedev-agent.html#gamedev-progress">GameDev Agent</a> homework, scored 8/10 · Sep 2026). Mechanics → Dynamics → Aesthetics for <strong>both</strong> core loops — not a single progression column.</p>
+
+        <div class="vision__grid" style="margin-top: 1.25rem;">
+          <article class="vision__card vision__card--mda">
+            <h3>Player core loop · MDA</h3>
+            <table class="vision__mda-table">
+              <thead>
+                <tr><th scope="col">Mechanics</th><th scope="col">Dynamics</th><th scope="col">Aesthetics</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Movement; tools/abilities; resource pickup; zone gates; skill tree / ability unlocks; reputation; knowledge &amp; character progression</td>
+                  <td>Exploration; discovery; problem-solving; decision-making; emergence; systemic interaction</td>
+                  <td>Agency; curiosity; freedom; satisfaction</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="vision__mda-note"><span class="vision__tag vision__tag--hyp">🔬 Hypothesis</span> Reputation &amp; knowledge progression — need mechanic checklist before canon.</p>
+          </article>
+          <article class="vision__card vision__card--mda">
+            <h3>World core loop · MDA</h3>
+            <table class="vision__mda-table">
+              <thead>
+                <tr><th scope="col">Mechanics</th><th scope="col">Dynamics</th><th scope="col">Aesthetics</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Zone state (damaged/restored); restoration actions; NPC/spawn triggers; branching world states; resource regeneration; environmental transformation</td>
+                  <td>Cause and effect; cascading consequences; transformation</td>
+                  <td>Wonder; surprise; relief; relaxation; contemplation</td>
+                </tr>
+              </tbody>
+            </table>
+          </article>
+        </div>
+
+        <article class="vision__card vision__card--beat" style="margin-top: 1.25rem;">
+          <h3>Loop bridge · example beat</h3>
+          <p class="vision__section-intro" style="margin-bottom: 0.75rem;"><span class="vision__tag vision__tag--est">🔒 Example beat</span> Vertical-slice moment — not global canon for every zone.</p>
+          <p>When the player cleans the forest around downtown, the forest fills with birds and sometimes happy families walking with dogs. On the next <em>Explore</em> they see a beautiful place and can even add bird feeders — a new possibility after world state changes (principles #3, #4), not stats alone.</p>
+        </article>
+      </section>
     </section>
 
-    <section>
+    <section id="unreal">
       <h2>Unreal Projects</h2>
-      <!-- content -->
+      <p class="vision__section-intro">ProductStar Unreal Engine program — building toward a vertical slice of the restoration game.</p>
+      <div class="vision__grid">
+        <article class="vision__card">
+          <h3>Current focus</h3>
+          <ul>
+            <li>Phase 1: Blueprints & C++ basics (Track A)</li>
+            <li>Next: <code>A01</code> — project setup in UE5</li>
+            <li>Goal: explore + restore one zone + visible world change</li>
+          </ul>
+        </article>
+        <article class="vision__card">
+          <h3>Parallel skills</h3>
+          <ul>
+            <li>Camera, light, VFX (Track F) — mood of damaged vs restored</li>
+            <li>Blender — YouTube self-study, props for zones</li>
+            <li>Target: <code>RestorationGame</code> UE project</li>
+          </ul>
+        </article>
+      </div>
     </section>
 
-    <section>
+    <section id="narrative">
       <h2>Narrative Ideas</h2>
-      <!-- content -->
+      <p class="vision__section-intro">Open design questions — not locked yet.</p>
+      <dl class="vision__open">
+        <dt>Setting</dt>
+        <dd>Fantasy, post-apocalyptic, cozy, or hybrid — TBD</dd>
+        <dt>Camera & perspective</dt>
+        <dd>Third-person exploration likely; not finalized</dd>
+        <dt>Combat</dt>
+        <dd>Non-combat or light conflict — restoration-first</dd>
+        <dt>Platform</dt>
+        <dd>PC desktop prototype first</dd>
+        <dt>Working title</dt>
+        <dd>TBD — brief and loops are fixed</dd>
+      </dl>
     </section>
   </main>
 

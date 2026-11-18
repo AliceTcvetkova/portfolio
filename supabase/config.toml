@@ -1,0 +1,7 @@
+name = "resume-match"
+verify_jwt = false
+
+[functions.resume-match]
+
+[functions.reels-agent]
+verify_jwt = false

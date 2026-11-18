@@ -12,6 +12,9 @@ Bare HTML structure — no design. English.
 | IRPO | `irpo.html` |
 | Locus Chamber | `locus-chamber.html` |
 | Clean Map | `clean-map.html` |
+| Reels Agent | `reels-agent.html` |
+| GameDev Agent | `gamedev-agent.html` |
+| Resume Matching Agent | `resume-matching-agent.html` |
 | Vision Projects | `vision-projects.html` |
 
 ## Home sections
